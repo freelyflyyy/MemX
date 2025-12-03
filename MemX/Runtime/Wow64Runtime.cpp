@@ -9,34 +9,40 @@ namespace MemX {
 	}
 
 	ptr_t Wow64Runtime::getPEB(PEB32* peb) {
-		if (!peb) {
-			return 0; // Invalid parameter
-		}
-
-		ULONG_PTR pebAddress32 = 0;
-		ULONG returnLength = 0;
-
+		if ( _barrier.targetWow64 == false ) 
+			return 0;
+		
+		PROCESS_BASIC_INFORMATION pbi = { 0 };
 		NTSTATUS status = NtQueryInformationProcess(
 			_hProcess,
 			static_cast<PROCESS_INFORMATION_CLASS>(ProcessWow64Information),
-			&pebAddress32,
-			sizeof(ULONG_PTR),
-			&returnLength
+			&pbi,
+			sizeof(pbi),
+			nullptr
 		);
 
-		if (NT_SUCCESS(status) && pebAddress32 != 0) {
-			SIZE_T bytesRead;
-			status = ReadProcessMemoryT((ptr_t)pebAddress32, peb, sizeof(PEB32), &bytesRead);
-			if (NT_SUCCESS(status) && bytesRead == sizeof(PEB32)) {
-				return (ptr_t)pebAddress32;
-			}
-		}
+		if ( NT_SUCCESS(status) && peb ) 
+			ReadProcessMemory(_hProcess, reinterpret_cast<LPCVOID>(pbi.PebBaseAddress), peb, sizeof(PEB32), nullptr);
 		
-		return 0;
+		return reinterpret_cast<ptr_t>(pbi.PebBaseAddress);
 	}
 
 	ptr_t Wow64Runtime::getPEB(PEB64* peb) {
-		return ptr_t();
+		PROCESS_BASIC_INFORMATION64 pbi = { 0 };
+		ULONG returnLength = 0;
+
+		NTSTATUS status = NtWow64QueryInformationProcess64(
+			_hProcess,
+			static_cast<PROCESS_INFORMATION_CLASS>(ProcessBasicInformation),
+			&pbi,
+			sizeof(_PROCESS_BASIC_INFORMATION),
+			&returnLength
+		);
+
+		if ( STATUS_SUCCESS(status) && peb ) {
+			NtWow64ReadVirtualMemory64(_hProcess, pbi.PebBaseAddress, peb, sizeof(PEB64), NULL);
+		}
+		return  reinterpret_cast<ptr_t>(pbi.PebBaseAddress);
 	}
 
 	NTSTATUS Wow64Runtime::ReadProcessMemoryT(ptr_t lpBaseAddress, LPVOID lpBuffer, size_t dwSize, SIZE_T* readBytes) {
