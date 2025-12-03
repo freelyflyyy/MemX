@@ -2,7 +2,7 @@
 
 #include "../Common/WinApi/WinHeaders.h"
 #include "../Common/WinApi/ArchitectureApi.h"
-#include "../Common/NtApi/NtStructures.h"
+#include "../Common/NtApi/NtApi.h"
 #include "../Common/Types/Type.h"
 #include "../Config.h"
 
@@ -17,14 +17,26 @@ namespace MemX {
 		};
 		MEMX_API ~Runtime() {};
 
-		virtual ptr_t getPEB(PEB32* peb) { return 0; };
-		virtual ptr_t getPEB(PEB64* peb) { return 0; };
+		PTR_T maxAddr32() {
+			return 0x7FFFFFFF;
+		}
 
-		virtual NTSTATUS ReadProcessMemoryT(ptr_t lpBaseAddress, LPVOID lpBuffer, size_t dwSize, SIZE_T* readBytes) = 0;
+		PTR_T maxAddr64() {
+			return 0x7FFFFFFFFFFF;
+		}
 
-		virtual NTSTATUS WriteProcessMemoryT(ptr_t lpBaseAddress, LPCVOID lpBuffer, size_t dwSize, SIZE_T* writtenBytes = NULL) = 0;
+		BOOL isTargetWow64() const {
+			return _barrier.targetWow64;
+		}
 
-		virtual NTSTATUS VirtualQueryExT(ptr_t lpAddress, PMEMORY_BASIC_INFORMATION64 lpBuffer) = 0;
+		virtual NTSTATUS GetTargetPeb(PEB32* peb) = 0;
+		virtual NTSTATUS GetTargetPeb(PEB64* peb) = 0;
+
+		virtual NTSTATUS ReadProcessMemoryT(PTR_T lpBaseAddress, LPVOID lpBuffer, SIZE_T dwSize, DWORD64* readBytes) = 0;
+
+		virtual NTSTATUS WriteProcessMemoryT(PTR_T lpBaseAddress, LPCVOID lpBuffer, SIZE_T dwSize, DWORD64* writtenBytes = NULL) = 0;
+
+		virtual NTSTATUS VirtualQueryExT(PTR_T lpAddress, PMEMORY_BASIC_INFORMATION64 lpBuffer) = 0;
 
 		protected:
 		HANDLE _hProcess;

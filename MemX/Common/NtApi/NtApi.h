@@ -1,85 +1,252 @@
 #pragma once
 
-#include "NtStructures.h"
-#include "NtApiResolver.h"
-
-// This header provides global access to NT API functions loaded at runtime.
-// Include this file in any .cpp file where you need to call these functions.
-// You must call Bootstrap() once at program startup before using any of these.
+#include "../WinApi/WinHeaders.h"
+#include "NtCallExt.h"
 
 namespace MemX {
-	// NtDll Functions
-	typedef NTSTATUS(NTAPI* fnNtQuerySystemInformation)(
-		_In_ SYSTEM_INFORMATION_CLASS SystemInformationClass,
-		_Out_ PVOID SystemInformation,
-		_In_ ULONG SystemInformationLength,
-		_Out_opt_ PULONG ReturnLength
-		);
 
-	typedef NTSTATUS(NTAPI* fnNtQueryInformationProcess)(
-		_In_ HANDLE ProcessHandle,
-		_In_ PROCESS_INFORMATION_CLASS ProcessInformationClass,
-		_Out_ PVOID ProcessInformation,
-		_In_ ULONG ProcessInformationLength,
-		_Out_opt_ PULONG ReturnLength
-		);
+	typedef enum _MEMORY_INFORMATION_CLASS {
+		MemoryBasicInformation = 0,
+		MemoryWorkingSetInformation = 1,
+		MemoryMappedFilenameInformation = 2,
+		MemoryRegionInformation = 3,
+		MemoryWorkingSetExInformation = 4,
+		MemorySharedCommitInformation = 5,
+		MemoryImageInformation = 6,
+		MemoryRegionInformationEx = 7,
+		MemoryPrivilegedBasicInformation = 8
+	} MEMORY_INFORMATION_CLASS;
 
-	typedef NTSTATUS(NTAPI* fnRtlGetLastNtStatus)();
+	template<typename T>
+	struct _PROCESS_BASIC_INFORMATION_T {
+		NTSTATUS ExitStatus;
+		UINT32    Reserved0;
+		T	     PebBaseAddress;
+		T	     AffinityMask;
+		LONG	 BasePriority;
+		ULONG	 Reserved1;
+		T	     uUniqueProcessId;
+		T	     uInheritedFromUniqueProcessId;
+	};
 
-	typedef ULONG(NTAPI* fnRtlSetLastWin32ErrorAndNtStatusFromNtStatus)(
-		_In_ NTSTATUS Status
-		);
+	typedef _PROCESS_BASIC_INFORMATION_T<DWORD> PROCESS_BASIC_INFORMATION32;
+	typedef _PROCESS_BASIC_INFORMATION_T<DWORD64> PROCESS_BASIC_INFORMATION64;
 
-	typedef NTSTATUS(NTAPI* fnNtWow64QueryInformationProcess64) (
-		_In_      HANDLE           ProcessHandle,
-		_In_      PROCESS_INFORMATION_CLASS ProcessInformationClass,
-		_Out_     PVOID            ProcessInformation,
-		_In_      ULONG            ProcessInformationLength,
-		_Out_opt_ PULONG           ReturnLength
-		);
+	#pragma pack(push, 1)
+	template <class T>
+	struct _LIST_ENTRY_T {
+		T Flink;
+		T Blink;
+	};
 
-	typedef NTSTATUS(NTAPI* fnNtWow64ReadVirtualMemory64) (
-		_In_  HANDLE  ProcessHandle,
-		_In_  UINT64  BaseAddress,
-		_Out_ PVOID   Buffer,
-		_In_  UINT64  Size,
-		_Out_ PUINT64 NumberOfBytesRead
-		);
+	template <class T>
+	struct _UNICODE_STRING_T {
+		union {
+			struct {
+				WORD Length;
+				WORD MaximumLength;
+			};
+			T dummy;
+		};
+		T Buffer;
+	};
 
+	template <class T>
+	struct _NT_TIB_T {
+		T ExceptionList;
+		T StackBase;
+		T StackLimit;
+		T SubSystemTib;
+		T FiberData;
+		T ArbitraryUserPointer;
+		T Self;
+	};
 
-	// Global pointers to the dynamically loaded NT API functions.
+	template <class T>
+	struct _CLIENT_ID_T {
+		T UniqueProcess;
+		T UniqueThread;
+	};
 
-	inline fnNtQuerySystemInformation pfnNtQuerySystemInformation = nullptr;
-	inline fnNtQueryInformationProcess pfnNtQueryInformationProcess = nullptr;
-	inline fnRtlGetLastNtStatus pfnRtlGetLastNtStatus = nullptr;
-	inline fnRtlSetLastWin32ErrorAndNtStatusFromNtStatus pfnRtlSetLastWin32ErrorAndNtStatusFromNtStatus = nullptr;
-	inline fnNtWow64QueryInformationProcess64 pfnNtWow64QueryInformationProcess64 = nullptr;
-	inline fnNtWow64ReadVirtualMemory64 pfnNtWow64ReadVirtualMemory64 = nullptr;
+	template <class T>
+	struct _TEB_T_ {
+		_NT_TIB_T<T> NtTib;
+		T EnvironmentPointer;
+		_CLIENT_ID_T<T> ClientId;
+		T ActiveRpcHandle;
+		T ThreadLocalStoragePointer;
+		T ProcessEnvironmentBlock;
+		DWORD LastErrorValue;
+		DWORD CountOfOwnedCriticalSections;
+		T CsrClientThread;
+		T Win32ThreadInfo;
+		DWORD User32Reserved[ 26 ];
+		//rest of the structure is not defined for now, as it is not needed
+	};
 
-	//Macro definitions to allow calling NT API functions directly by their name.
-	//If so, it would be better to determine whether the function pointer exists
+	template <class T>
+	struct _LDR_DATA_TABLE_ENTRY_T {
+		_LIST_ENTRY_T<T> InLoadOrderLinks;
+		_LIST_ENTRY_T<T> InMemoryOrderLinks;
+		_LIST_ENTRY_T<T> InInitializationOrderLinks;
+		T DllBase;
+		T EntryPoint;
+		union {
+			DWORD SizeOfImage;
+			T dummy01;
+		};
+		_UNICODE_STRING_T<T> FullDllName;
+		_UNICODE_STRING_T<T> BaseDllName;
+		DWORD Flags;
+		WORD LoadCount;
+		WORD TlsIndex;
+		union {
+			_LIST_ENTRY_T<T> HashLinks;
+			struct {
+				T SectionPointer;
+				T CheckSum;
+			};
+		};
+		union {
+			T LoadedImports;
+			DWORD TimeDateStamp;
+		};
+		T EntryPointActivationContext;
+		T PatchInformation;
+		_LIST_ENTRY_T<T> ForwarderLinks;
+		_LIST_ENTRY_T<T> ServiceTagLinks;
+		_LIST_ENTRY_T<T> StaticLinks;
+		T ContextInformation;
+		T OriginalBase;
+		_LARGE_INTEGER LoadTime;
+	};
 
-	#define NtQuerySystemInformation pfnNtQuerySystemInformation
-	#define NtQueryInformationProcess pfnNtQueryInformationProcess
-	#define RtlGetLastNtStatus pfnRtlGetLastNtStatus
-	#define RtlSetLastWin32ErrorAndNtStatusFromNtStatus pfnRtlSetLastWin32ErrorAndNtStatusFromNtStatus
-	#define NtWow64QueryInformationProcess64 pfnNtWow64QueryInformationProcess64
-	#define NtWow64ReadVirtualMemory64 pfnNtWow64ReadVirtualMemory64
+	template <class T>
+	struct _PEB_LDR_DATA_T {
+		DWORD Length;
+		DWORD Initialized;
+		T SsHandle;
+		_LIST_ENTRY_T<T> InLoadOrderModuleList;
+		_LIST_ENTRY_T<T> InMemoryOrderModuleList;
+		_LIST_ENTRY_T<T> InInitializationOrderModuleList;
+		T EntryInProgress;
+		DWORD ShutdownInProgress;
+		T ShutdownThreadId;
+	};
 
+	template <class T, class NGF, int A>
+	struct _PEB_T {
+		union {
+			struct {
+				BYTE InheritedAddressSpace;
+				BYTE ReadImageFileExecOptions;
+				BYTE BeingDebugged;
+				BYTE BitField;
+			};
+			T dummy01;
+		};
+		T Mutant;
+		T ImageBaseAddress;
+		T Ldr;
+		T ProcessParameters;
+		T SubSystemData;
+		T ProcessHeap;
+		T FastPebLock;
+		T AtlThunkSListPtr;
+		T IFEOKey;
+		T CrossProcessFlags;
+		T UserSharedInfoPtr;
+		DWORD SystemReserved;
+		DWORD AtlThunkSListPtr32;
+		T ApiSetMap;
+		T TlsExpansionCounter;
+		T TlsBitmap;
+		DWORD TlsBitmapBits[ 2 ];
+		T ReadOnlySharedMemoryBase;
+		T HotpatchInformation;
+		T ReadOnlyStaticServerData;
+		T AnsiCodePageData;
+		T OemCodePageData;
+		T UnicodeCaseTableData;
+		DWORD NumberOfProcessors;
+		union {
+			DWORD NtGlobalFlag;
+			NGF dummy02;
+		};
+		LARGE_INTEGER CriticalSectionTimeout;
+		T HeapSegmentReserve;
+		T HeapSegmentCommit;
+		T HeapDeCommitTotalFreeThreshold;
+		T HeapDeCommitFreeBlockThreshold;
+		DWORD NumberOfHeaps;
+		DWORD MaximumNumberOfHeaps;
+		T ProcessHeaps;
+		T GdiSharedHandleTable;
+		T ProcessStarterHelper;
+		T GdiDCAttributeList;
+		T LoaderLock;
+		DWORD OSMajorVersion;
+		DWORD OSMinorVersion;
+		WORD OSBuildNumber;
+		WORD OSCSDVersion;
+		DWORD OSPlatformId;
+		DWORD ImageSubsystem;
+		DWORD ImageSubsystemMajorVersion;
+		T ImageSubsystemMinorVersion;
+		T ActiveProcessAffinityMask;
+		T GdiHandleBuffer[ A ];
+		T PostProcessInitRoutine;
+		T TlsExpansionBitmap;
+		DWORD TlsExpansionBitmapBits[ 32 ];
+		T SessionId;
+		ULARGE_INTEGER AppCompatFlags;
+		ULARGE_INTEGER AppCompatFlagsUser;
+		T pShimData;
+		T AppCompatInfo;
+		_UNICODE_STRING_T<T> CSDVersion;
+		T ActivationContextData;
+		T ProcessAssemblyStorageMap;
+		T SystemDefaultActivationContextData;
+		T SystemAssemblyStorageMap;
+		T MinimumStackCommit;
+		T FlsCallback;
+		_LIST_ENTRY_T<T> FlsListHead;
+		T FlsBitmap;
+		DWORD FlsBitmapBits[ 4 ];
+		T FlsHighIndex;
+		T WerRegistrationData;
+		T WerShipAssertPtr;
+		T pContextData;
+		T pImageHeaderHash;
+		T TracingFlags;
+	};
+	#pragma pack(pop)
 
-	//NTSTATUS offset in TEB structure 
-	//for different architectures
+	typedef _LDR_DATA_TABLE_ENTRY_T<DWORD> LDR_DATA_TABLE_ENTRY32;
+	typedef _LDR_DATA_TABLE_ENTRY_T<DWORD64> LDR_DATA_TABLE_ENTRY64;
+
+	typedef _TEB_T_<DWORD> TEB32;
+	typedef _TEB_T_<DWORD64> TEB64;
+
+	typedef _PEB_LDR_DATA_T<DWORD> PEB_LDR_DATA32;
+	typedef _PEB_LDR_DATA_T<DWORD64> PEB_LDR_DATA64;
+
+	typedef _PEB_T<DWORD, DWORD64, 34> PEB32;
+	typedef _PEB_T<DWORD64, DWORD, 30> PEB64;
+
+	// NTSTATUS offset in TEB structure for different architectures
 	#ifdef _WIN64
 	constexpr size_t NT_STATUS_OFFSET = 0x1250;
 	#else
-	constexpr size_t NT_STATUS_OFFSET 0x00B4
-		#endif
+	constexpr size_t NT_STATUS_OFFSET = 0x00B4;
+	#endif
 
-		inline NTSTATUS GetLastNtStatus() {
+	inline NTSTATUS GetLastNtStatus() {
 		return *(NTSTATUS*) ((BYTE*) NtCurrentTeb() + NT_STATUS_OFFSET);
 	}
 
-	inline VOID SetLastNtStatus(NTSTATUS status) {
+	inline void SetLastNtStatus(NTSTATUS status) {
 		*(NTSTATUS*) ((BYTE*) NtCurrentTeb() + NT_STATUS_OFFSET) = status;
 	}
+
 }

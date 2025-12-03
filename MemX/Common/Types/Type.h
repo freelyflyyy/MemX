@@ -12,8 +12,13 @@ namespace MemX {
 	template <typename T>
 	using result = NtResult<T>;
 
-	using ptr_t = uintptr_t;
-	using ptr_module_t = ptr_t;
+	using PTR_T = UINT64;
+	using PTR_MODULE_T = PTR_T;
+
+	union Reg64 {
+		DWORD64 v;
+		DWORD dw[ 2 ];
+	};
 
 	enum ArchBarrier {
 		ARCHITECTURE_32_32,//Both processes are Wow64
@@ -31,14 +36,14 @@ namespace MemX {
 	};
 
 	struct ModuleInfo{
-		ptr_module_t baseAddr;
+		PTR_MODULE_T baseAddr;
 		std::wstring fullName;
 		std::wstring fullPath;
-		uint32_t uSize;
+		UINT32 uSize;
 		
 		bool operator==(const ModuleInfo& other) const{
 			return this->baseAddr == other.baseAddr;
 		}
 	};
-	using PModuleData = std::shared_ptr<const ModuleInfo>;
+	using PModuleInfo = std::shared_ptr<const ModuleInfo>;
 }

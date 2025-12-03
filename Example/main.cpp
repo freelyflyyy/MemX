@@ -1,57 +1,32 @@
 #include <iostream>
-#include <MemX/Common/NtApi/Bootstrap.h>
+#include <MemX/Process/Process.h>
 #include <MemX/Common/NtApi/NtApi.h>
-#include <MemX/Common/NtApi/NtStructures.h>
+#include <MemX/Common/NtApi/NtCallExt.h>
 
-// Define NT_SUCCESS macro if not already defined
-#ifndef NT_SUCCESS
-#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
-#endif
+using namespace MemX;
 
 int main()
 {
-    // 1. Initialize the NtApi function pointers
-    std::cout << "Initializing NtApi..." << std::endl;
-    MemX::loadNtFunc();
+	Process process;
+	process.Catch(L"PlantsVsZombies.exe"); // Replace 1234 with a valid PID
+	MemX::NtResult<DWORD> readResult = process.Memory().Read<DWORD>(0x5ED66350);
+	if ( readResult.success() ) {
+		std::cout << "Value at address 0x5EAE3430: " << std::dec << readResult.result() << std::dec << std::endl;
+		process.Memory().Write(0x5ED66350, 9999);
+	} else {
+		std::cout << "Failed to read memory. NTSTATUS: " << std::hex
+			<< readResult.success() << std::dec << std::endl;
+	}
 
-    // Check if the essential function pointer was loaded
-    if (MemX::pfnNtQueryInformationProcess == nullptr)
-    {
-        std::cerr << "Failed to load NtQueryInformationProcess. Aborting test." << std::endl;
-        return 1;
-    }
-    std::cout << "NtQueryInformationProcess loaded successfully." << std::endl;
+	PEB32 peb32 = { 0 };
+	process.Core().getTargetPeb(&peb32);
+	std::cout << "PEB32 Ldr: 0x" << std::hex << peb32.Ldr << std::endl;
+	DWORD imageBase = process.Memory().Read<DWORD>(peb32.ImageBaseAddress).result(imageBase);
+	std::cout << "Image Base Address: 0x" << std::hex << imageBase << std::dec << std::endl;
 
-    // 2. Get the handle to the current process
-    HANDLE hProcess = GetCurrentProcess();
-    std::cout << "Testing with current process handle: " << hProcess << std::endl;
 
-    // 3. Call NtQueryInformationProcess
-    PROCESS_BASIC_INFORMATION pbi;
-    ULONG returnLength = 0;
-
-    std::cout << "Calling NtQueryInformationProcess..." << std::endl;
-    NTSTATUS status = MemX::NtQueryInformationProcess(
-        hProcess,
-        static_cast<PROCESS_INFORMATION_CLASS>(ProcessBasicInformation),
-        &pbi,
-        sizeof(pbi),
-        &returnLength);
-
-    // 4. Validate the result
-    if (NT_SUCCESS(status))
-    {
-        std::cout << "SUCCESS: NtQueryInformationProcess returned success status." << std::endl;
-        std::cout << "PEB Base Address: 0x" << pbi.PebBaseAddress << std::endl;
-        std::cout << "Process ID: " << pbi.UniqueProcessId << std::endl;
-    }
-    else
-    {
-        std::cerr << "FAILURE: NtQueryInformationProcess returned error status: 0x" << std::hex << status << std::endl;
-    }
-
-    std::cout << "Test finished. Press Enter to exit." << std::endl;
-    std::cin.get();
-
+	PEB64 peb64 = { 0 };
+	process.Core().getTargetPeb(&peb64);
+	std::cout << "PEB64 Ldr: 0x" << std::hex << peb64.Ldr << std::dec << std::endl;
     return 0;
 }

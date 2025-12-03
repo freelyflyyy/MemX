@@ -9,13 +9,14 @@ include_directories(..)
 ############################################################
 set(HEADER_INCLUDE "Common/WinApi/WinHeaders.h"
 					"Common/WinApi/ArchitectureApi.h"
-					"Common/NtApi/NtApiResolver.h"
+					"Common/NtApi/NtCallExt.h"
 					"Common/NtApi/NtApi.h"
 					"Common/NtApi/NtResult.h"
+					"Common/Utils/Wow64Utils.h"
 					"Common/Types/Type.h"
-					"Common/NtApi/NtStructures.h"
 					"Common/NtApi/Bootstrap.h")
-file(GLOB Inc ${HEADER_INCLUDE})
+set(SOURCE_INCLUDE "Common/NtApi/NtCallExt.cpp")
+file(GLOB Inc ${HEADER_INCLUDE} ${SOURCE_INCLUDE})
 source_group(Inc FILES ${Inc})
 ############################################################
 set(SOURCE_PROCESS "Process/Process.h"
@@ -43,7 +44,8 @@ set(HEADER_MAIN "Config.h")
 #############################################################
 set(SOURCE_LIB ${SOURCE_PROCESS}
 				${HEADER_SOURCE}
-				${HEADER_RUNTIME})
+				${HEADER_RUNTIME}
+				${SOURCE_INCLUDE})
 set(HEADER_LIB ${HEADER_PROCESS}
 				${HEADER_INCLUDE}
 				${SOURCE_RUNTIME}

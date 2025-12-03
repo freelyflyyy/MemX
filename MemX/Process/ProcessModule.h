@@ -9,7 +9,7 @@ namespace MemX {
 		ProcessModule(class Process& process);
 		~ProcessModule();
 
-		MEMX_API PModuleData GetMainModule();
+		MEMX_API PModuleInfo GetMainModule();
 
 
 		private:

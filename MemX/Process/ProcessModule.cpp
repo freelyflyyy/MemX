@@ -10,7 +10,7 @@ namespace MemX {
 	ProcessModule::~ProcessModule() {
 	}
 
-	MEMX_API PModuleData ProcessModule::GetMainModule() {
-		return MEMX_API PModuleData();
+	MEMX_API PModuleInfo ProcessModule::GetMainModule() {
+		return MEMX_API PModuleInfo();
 	}
 }

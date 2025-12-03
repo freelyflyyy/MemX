@@ -66,6 +66,8 @@ namespace MemX {
 
 		MEMX_API NTSTATUS Drop();
 
+		MEMX_API static NTSTATUS GetPidByName(const std::wstring& processName);
+
 		MEMX_API ProcessMemory& Memory() { return _memory; }
 		MEMX_API ProcessCore& Core() { return _core; }
 

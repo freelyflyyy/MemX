@@ -1,8 +1,10 @@
 #pragma once
-#include "NtApiResolver.h"
 #include "NtApi.h"
+#include <atomic>
 
 namespace MemX {
+	std::atomic<bool> done(false);
+
 	//Promote permissions
 	MEMX_API NTSTATUS EnablePrivilege(LPCWSTR lpszPrivilege) {
 		HANDLE hToken = nullptr;
@@ -19,7 +21,7 @@ namespace MemX {
 			}
 		}
 
-		if (!LookupPrivilegeValueW(NULL, lpszPrivilege, &luid)) {
+		if (!LookupPrivilegeValueW(NULL, lpszPrivilege, &luid) ) {
 			CloseHandle(hToken);
 			return GetLastNtStatus();
 		}
@@ -32,32 +34,22 @@ namespace MemX {
 			return GetLastNtStatus();
 		}
 
-		if (GetLastError() == ERROR_NOT_ALL_ASSIGNED) {
-			CloseHandle(hToken);
-			return GetLastNtStatus();
-		}
-
+		DWORD dwError = GetLastError();
 		CloseHandle(hToken);
-		return STATUS_SUCCESS;
-	}
-
-
-	void loadNtFunc() {
-		HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
-		if (hNtdll == nullptr) {
-			return;
+		
+		if (dwError == ERROR_NOT_ALL_ASSIGNED) {
+			return STATUS_PRIVILEGE_NOT_HELD;
 		}
 
-		//init ntfunc pointers
-		pfnNtQuerySystemInformation = reinterpret_cast<fnNtQuerySystemInformation>(NtApiResolver::Instance().loadFunc(hNtdll, L"NtQuerySystemInformation"));
-		pfnNtQueryInformationProcess = reinterpret_cast<fnNtQueryInformationProcess>(NtApiResolver::Instance().loadFunc(hNtdll, L"NtQueryInformationProcess"));
-		pfnRtlGetLastNtStatus = reinterpret_cast<fnRtlGetLastNtStatus>(NtApiResolver::Instance().loadFunc(hNtdll, L"RtlGetLastNtStatus"));
-		pfnRtlSetLastWin32ErrorAndNtStatusFromNtStatus = reinterpret_cast<fnRtlSetLastWin32ErrorAndNtStatusFromNtStatus>(NtApiResolver::Instance().loadFunc(hNtdll, L"RtlSetLastWin32ErrorAndNtStatusFromNtStatus"));
-		pfnNtWow64QueryInformationProcess64 = reinterpret_cast<fnNtWow64QueryInformationProcess64>(NtApiResolver::Instance().loadFunc(hNtdll, L"NtWow64QueryInformationProcess64"));
-		pfnNtWow64ReadVirtualMemory64 = reinterpret_cast<fnNtWow64ReadVirtualMemory64>(NtApiResolver::Instance().loadFunc(hNtdll, L"NtWow64ReadVirtualMemory64"));
+		return (dwError == ERROR_SUCCESS) ? STATUS_SUCCESS : GetLastNtStatus();
 	}
+
 
 	MEMX_API void Bootstrap() {
-		loadNtFunc();
+		//Ensure that Nt functions are loaded only once
+		bool expected = false;
+		if ( done.compare_exchange_strong(expected, true) ) {
+			EnablePrivilege(SE_DEBUG_NAME);
+		}
 	}
 }
