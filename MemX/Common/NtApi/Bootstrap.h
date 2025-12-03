@@ -53,6 +53,8 @@ namespace MemX {
 		pfnNtQueryInformationProcess = reinterpret_cast<fnNtQueryInformationProcess>(NtApiResolver::Instance().loadFunc(hNtdll, L"NtQueryInformationProcess"));
 		pfnRtlGetLastNtStatus = reinterpret_cast<fnRtlGetLastNtStatus>(NtApiResolver::Instance().loadFunc(hNtdll, L"RtlGetLastNtStatus"));
 		pfnRtlSetLastWin32ErrorAndNtStatusFromNtStatus = reinterpret_cast<fnRtlSetLastWin32ErrorAndNtStatusFromNtStatus>(NtApiResolver::Instance().loadFunc(hNtdll, L"RtlSetLastWin32ErrorAndNtStatusFromNtStatus"));
+		pfnNtWow64QueryInformationProcess64 = reinterpret_cast<fnNtWow64QueryInformationProcess64>(NtApiResolver::Instance().loadFunc(hNtdll, L"NtWow64QueryInformationProcess64"));
+		pfnNtWow64ReadVirtualMemory64 = reinterpret_cast<fnNtWow64ReadVirtualMemory64>(NtApiResolver::Instance().loadFunc(hNtdll, L"NtWow64ReadVirtualMemory64"));
 	}
 
 	MEMX_API void Bootstrap() {

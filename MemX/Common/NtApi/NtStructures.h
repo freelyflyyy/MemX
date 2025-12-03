@@ -2,15 +2,25 @@
 #include "../WinApi/WinHeaders.h"
 
 namespace MemX {
+	typedef struct _PROCESS_BASIC_INFORMATION64 {
+		NTSTATUS ExitStatus;
+		ULONG_PTR Reserved0;
+		UINT64 PebBaseAddress;       // �� 64 λ��ַ
+		UINT64 AffinityMask;
+		KPRIORITY BasePriority;
+		HANDLE UniqueProcessId;
+		HANDLE InheritedFromUniqueProcessId;
+	} PROCESS_BASIC_INFORMATION64;
+
 	typedef struct PEB_BITFIELD {
-		BOOLEAN ImageUsesLargePages : 1;            // ʹ�ô�ҳ
-		BOOLEAN IsProtectedProcess : 1;             // �ܱ�������
-		BOOLEAN IsImageDynamicallyRelocated : 1;    // ��ַ���ض�λ
-		BOOLEAN SkipPatchingUser32Forwarders : 1;   // ���� User32 ת��
-		BOOLEAN IsPackagedProcess : 1;              // APPX/MSIX ������
-		BOOLEAN IsAppContainer : 1;                 // AppContainer
-		BOOLEAN IsProtectedProcessLight : 1;        // PPL ����
-		BOOLEAN IsLongPathAwareProcess : 1;         // ֧�ֳ�·��
+		BOOLEAN ImageUsesLargePages : 1; 
+		BOOLEAN IsProtectedProcess : 1;     
+		BOOLEAN IsImageDynamicallyRelocated : 1;  
+		BOOLEAN SkipPatchingUser32Forwarders : 1; 
+		BOOLEAN IsPackagedProcess : 1;
+		BOOLEAN IsAppContainer : 1;        
+		BOOLEAN IsProtectedProcessLight : 1;      
+		BOOLEAN IsLongPathAwareProcess : 1;    
 	} PEB_BITFIELD;
 
 	typedef struct _PEB32 {
@@ -63,7 +73,6 @@ namespace MemX {
 		DWORD OSMinorVersion;               // 0x11C
 		USHORT OSBuildNumber;               // 0x120
 		USHORT OSCSDVersion;                // 0x122
-
 	} PEB64, * PPEB64;
 
 	#ifdef _WIN64
