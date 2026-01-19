@@ -39,11 +39,25 @@ namespace MemX {
 		PTR_MODULE_T baseAddr;
 		std::wstring fullName;
 		std::wstring fullPath;
+		PTR_T ldrPoint;
+		BOOL isManual;
 		UINT32 uSize;
-		
+		BOOL isX86;
+
 		bool operator==(const ModuleInfo& other) const{
 			return this->baseAddr == other.baseAddr;
 		}
+
+		bool isVild() const {
+			return baseAddr != 0;
+		}
 	};
-	using PModuleInfo = std::shared_ptr<const ModuleInfo>;
+
+	using ModuleInfoPtr = std::shared_ptr<const ModuleInfo>;
+
+	enum ModuleSearchMode {
+		LdrList,
+		SectionScan,
+		ForceScan
+	};
 }

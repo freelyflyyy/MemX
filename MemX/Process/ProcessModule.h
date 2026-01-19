@@ -1,24 +1,30 @@
 #pragma once
 #include "../Common/Types/Type.h"
-#include "../Config.h"
+#include <shared_mutex>
+#include <unordered_map>
 
 
 namespace MemX {
+
 	class ProcessModule {
 		public:
 		ProcessModule(class Process& process);
 		~ProcessModule();
 
-		MEMX_API PModuleInfo GetMainModule();
+		 BOOL IsCached(const std::wstring& moduleName);
 
+		 ModuleInfoPtr GetMainModule();
 
 		private:
 		ProcessModule(const ProcessModule&) = delete;
 		ProcessModule& operator=(const ProcessModule&) = delete;
 
 		private:
-		class Process& _Process;
-		class ProcessCore& _Core;
-		class ProcessMemory& _Memory;
+		class Process& _process;
+		class ProcessCore& _core;
+		class ProcessMemory& _memory;
+
+		protected:
+		std::shared_mutex _mutex;
 	};
 }

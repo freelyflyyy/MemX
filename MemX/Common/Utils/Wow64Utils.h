@@ -2,7 +2,6 @@
 
 #include "../WinApi/WinHeaders.h"
 #include "../Types/Type.h"
-#include "../../Config.h"
 
 namespace MemX {
 	#define EMIT(a) __asm __emit (a)
@@ -22,7 +21,7 @@ namespace MemX {
 		EMIT(0xCB)                                                                     /* retf                  */
 
 	// REX.W 前缀 (64位操作数)
-	#define rex_w EMIT(0x48) _asm
+	#define rex_w EMIT(0x48) __asm
 
 	// 64位寄存器编号
 	#define rax  0

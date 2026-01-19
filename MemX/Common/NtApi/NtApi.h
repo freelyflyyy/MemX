@@ -248,5 +248,4 @@ namespace MemX {
 	inline void SetLastNtStatus(NTSTATUS status) {
 		*(NTSTATUS*) ((BYTE*) NtCurrentTeb() + NT_STATUS_OFFSET) = status;
 	}
-
 }

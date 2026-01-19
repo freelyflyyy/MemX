@@ -1,7 +1,6 @@
 #pragma once
 #include "../WinApi/WinHeaders.h"
 #include "../Types/Type.h"
-#include "../../Config.h"
 
 #include <unordered_map>
 #include <shared_mutex>
@@ -10,20 +9,15 @@
 namespace MemX {
 
 
-	//////////////////////////////////////////////////////////////////////////
-	// NtCallExt: NT函数调用扩展
-	//////////////////////////////////////////////////////////////////////////
-
 	class NtCallExt {
 		public:
 		virtual ~NtCallExt() = default;
 
-		//TODO:有时间需要统一参数
-		MEMX_API virtual DWORD64 __cdecl GetProcAddress64(DWORD64 hMod, const char* funcName) = 0;
-		MEMX_API virtual DWORD64 __cdecl GetModuleBase64(const wchar_t* moduleName) = 0;
-		MEMX_API virtual DWORD64 __cdecl GetTeb64() = 0;
-		MEMX_API virtual DWORD64 __cdecl GetPeb64() = 0;
-		MEMX_API virtual DWORD64 __cdecl GetNtdll64() = 0;
+		virtual DWORD64 __cdecl GetProcAddress64(DWORD64 hMod, const char* funcName) = 0;
+		virtual DWORD64 __cdecl GetModuleBase64(const wchar_t* moduleName) = 0;
+		virtual DWORD64 __cdecl GetTeb64() = 0;
+		virtual DWORD64 __cdecl GetPeb64() = 0;
+		virtual DWORD64 __cdecl GetNtdll64() = 0;
 
 		DWORD64 IsCached(const std::string& funcName) {
 			std::shared_lock<std::shared_mutex> lock(_mutex);
@@ -67,18 +61,16 @@ namespace MemX {
 		std::shared_mutex _mutex;
 	};
 
-	//////////////////////////////////////////////////////////////////////////
 	// X64NtCallExt: 原生64位实现
-	//////////////////////////////////////////////////////////////////////////
 	class X64NtCallExt : public NtCallExt {
 		public:
 		static X64NtCallExt& Instance();
 
-		MEMX_API DWORD64 __cdecl GetProcAddress64(DWORD64 hMod, const char* funcName) override;
-		MEMX_API DWORD64 __cdecl GetModuleBase64(const wchar_t* moduleName) override;
-		MEMX_API DWORD64 __cdecl GetTeb64() override;
-		MEMX_API DWORD64 __cdecl GetPeb64() override;
-		MEMX_API DWORD64 __cdecl GetNtdll64() override;
+		DWORD64 __cdecl GetProcAddress64(DWORD64 hMod, const char* funcName) override;
+		DWORD64 __cdecl GetModuleBase64(const wchar_t* moduleName) override;
+		DWORD64 __cdecl GetTeb64() override;
+		DWORD64 __cdecl GetPeb64() override;
+		DWORD64 __cdecl GetNtdll64() override;
 
 		template<typename... Args>
 		NTSTATUS X64Call(const DWORD64& funcAddr, Args&&... args) {
@@ -92,20 +84,18 @@ namespace MemX {
 		X64NtCallExt();
 	};
 
-	//////////////////////////////////////////////////////////////////////////
 	// Wow64NtCallExt: WoW64环境实现 (Heaven's Gate)
-	//////////////////////////////////////////////////////////////////////////
 	class Wow64NtCallExt : public NtCallExt {
 		public:
 		static Wow64NtCallExt& Instance();
 
-		MEMX_API DWORD64 __cdecl GetProcAddress64(DWORD64 hMod, const char* funcName) override;
-		MEMX_API DWORD64 __cdecl GetModuleBase64(const wchar_t* moduleName) override;
-		MEMX_API DWORD64 __cdecl GetTeb64() override;
-		MEMX_API DWORD64 __cdecl GetPeb64() override;
-		MEMX_API DWORD64 __cdecl GetNtdll64() override;
-		MEMX_API DWORD64 __cdecl GetLdrGetProcedureAddress();
-		MEMX_API DWORD64 __cdecl X64CallVa(DWORD64 funcAddr, int argCount, ...);
+		DWORD64 __cdecl GetProcAddress64(DWORD64 hMod, const char* funcName) override;
+		DWORD64 __cdecl GetModuleBase64(const wchar_t* moduleName) override;
+		DWORD64 __cdecl GetTeb64() override;
+		DWORD64 __cdecl GetPeb64() override;
+		DWORD64 __cdecl GetNtdll64() override;
+		DWORD64 __cdecl GetLdrGetProcedureAddress();
+		DWORD64 __cdecl X64CallVa(DWORD64 funcAddr, int argCount, ...);
 
 		template<typename... Args>
 		NTSTATUS X64Call(const DWORD64& funcAddr, Args&&... args) {

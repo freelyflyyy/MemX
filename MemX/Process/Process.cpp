@@ -4,34 +4,35 @@
 namespace MemX {
     Process::Process() 
         :_core(),
-        _memory(this) {
+        _memory(this),
+        _module(*this) {
         //Ensure weight lifting and successful initialization of kernel functions
         //Bootstrap();
     }
     Process::~Process(void) {
     }
 
-    MEMX_API NTSTATUS Process::Catch(DWORD pid, DWORD access) {
+     NTSTATUS Process::Catch(DWORD pid, DWORD access) {
         Drop();
         return _core.Open(pid, access);
     }
 
-    MEMX_API NTSTATUS Process::Catch(const wchar_t* processName, DWORD access) {
+     NTSTATUS Process::Catch(const wchar_t* processName, DWORD access) {
 		DWORD pid = GetPidByName(processName);
 		return pid >= 0 ? Catch(pid, access) : STATUS_NOT_FOUND;
     }
 
-    MEMX_API NTSTATUS Process::Catch(HANDLE proHandle) {
+     NTSTATUS Process::Catch(HANDLE proHandle) {
         Drop();
         return _core.Open(proHandle);
     }
 
-    MEMX_API NTSTATUS Process::Drop() {
+     NTSTATUS Process::Drop() {
 		_core.Close();
 		return STATUS_SUCCESS;
     }
 
-    MEMX_API NTSTATUS Process::GetPidByName(const std::wstring& processName) {
+     NTSTATUS Process::GetPidByName(const std::wstring& processName) {
 		HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if ( hSnap == INVALID_HANDLE_VALUE ) {
 			return GetLastNtStatus();

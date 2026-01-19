@@ -13,6 +13,7 @@ set(HEADER_INCLUDE "Common/WinApi/WinHeaders.h"
 					"Common/NtApi/NtApi.h"
 					"Common/NtApi/NtResult.h"
 					"Common/Utils/Wow64Utils.h"
+					"Common/Utils/StringUtils.h"
 					"Common/Types/Type.h"
 					"Common/NtApi/Bootstrap.h")
 set(SOURCE_INCLUDE "Common/NtApi/NtCallExt.cpp")
@@ -40,15 +41,12 @@ set(SOURCE_RUNTIME  "Runtime/X64Runtime.cpp"
 file(GLOB Runtime ${HEADER_RUNTIME} ${SOURCE_RUNTIME})
 source_group(Runtime FILES ${Runtime})
 #############################################################
-set(HEADER_MAIN "Config.h")
-#############################################################
 set(SOURCE_LIB ${SOURCE_PROCESS}
 				${HEADER_SOURCE}
 				${HEADER_RUNTIME}
 				${SOURCE_INCLUDE})
 set(HEADER_LIB ${HEADER_PROCESS}
 				${HEADER_INCLUDE}
-				${SOURCE_RUNTIME}
-				${HEADER_MAIN})
+				${SOURCE_RUNTIME})
 
 add_library(MemX STATIC ${SOURCE_LIB} ${HEADER_LIB})

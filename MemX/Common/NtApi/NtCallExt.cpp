@@ -6,10 +6,8 @@
 
 namespace MemX {
 
-	//////////////////////////////////////////////////////////////////////////
 	// X64NtCallExt: 64位原生实现
-	//////////////////////////////////////////////////////////////////////////
-
+	
 	X64NtCallExt& X64NtCallExt::Instance() {
 		static X64NtCallExt instance;
 		return instance;
@@ -18,21 +16,21 @@ namespace MemX {
 	X64NtCallExt::X64NtCallExt() {
 	}
 
-	MEMX_API DWORD64 __cdecl X64NtCallExt::GetProcAddress64(DWORD64 hMod, const char* funcName) {
+	 DWORD64 __cdecl X64NtCallExt::GetProcAddress64(DWORD64 hMod, const char* funcName) {
 		if (!hMod || !funcName) {
 			return 0;
 		}
 		return (DWORD64)GetProcAddress((HMODULE)hMod, funcName);
 	}
 
-	MEMX_API DWORD64 __cdecl X64NtCallExt::GetModuleBase64(const wchar_t* moduleName) {
+	 DWORD64 __cdecl X64NtCallExt::GetModuleBase64(const wchar_t* moduleName) {
 		if (!moduleName) {
 			return 0;
 		}
 		return (DWORD64)GetModuleHandleW(moduleName);
 	}
 
-	MEMX_API DWORD64 __cdecl X64NtCallExt::GetNtdll64() {
+	 DWORD64 __cdecl X64NtCallExt::GetNtdll64() {
 		static DWORD64 _ntdll64 = 0;
 		if (_ntdll64 != 0) {
 			return _ntdll64;
@@ -42,7 +40,7 @@ namespace MemX {
 	}
 
 
-	MEMX_API DWORD64 __cdecl X64NtCallExt::GetTeb64() {
+	 DWORD64 __cdecl X64NtCallExt::GetTeb64() {
 		Reg64 _teb64 = { 0 };
 		#ifdef _WIN64
 			_teb64.v = __readgsqword(FIELD_OFFSET(NT_TIB, Self));
@@ -50,7 +48,7 @@ namespace MemX {
 		return _teb64.v;
 	}
 
-	MEMX_API DWORD64 __cdecl X64NtCallExt::GetPeb64() {
+	 DWORD64 __cdecl X64NtCallExt::GetPeb64() {
 		Reg64 _peb64 = { 0 };
 		#ifdef _WIN64
 			_peb64.v = __readgsqword(FIELD_OFFSET(TEB, ProcessEnvironmentBlock));
@@ -58,9 +56,7 @@ namespace MemX {
 		return _peb64.v;
 	}
 
-	//////////////////////////////////////////////////////////////////////////
 	// Wow64NtCallExt: WoW64实现 (Heaven's Gate)
-	//////////////////////////////////////////////////////////////////////////
 
 	Wow64NtCallExt& Wow64NtCallExt::Instance() {
 		static Wow64NtCallExt instance;
@@ -70,7 +66,7 @@ namespace MemX {
 	Wow64NtCallExt::Wow64NtCallExt() {
 	}
 
-	MEMX_API DWORD64 __cdecl Wow64NtCallExt::GetProcAddress64(DWORD64 hMod, const char* funcName) {
+	 DWORD64 __cdecl Wow64NtCallExt::GetProcAddress64(DWORD64 hMod, const char* funcName) {
 		static DWORD64 ldrGetProcedureAddress = 0;
 		if ( !ldrGetProcedureAddress ) {
 			ldrGetProcedureAddress = GetLdrGetProcedureAddress();
@@ -87,7 +83,7 @@ namespace MemX {
 		return rect;
 	}
 
-	MEMX_API DWORD64 __cdecl Wow64NtCallExt::GetModuleBase64(const wchar_t* moduleName) {
+	 DWORD64 __cdecl Wow64NtCallExt::GetModuleBase64(const wchar_t* moduleName) {
 		DWORD64 teb64Addr = GetTeb64();
 		if (teb64Addr == 0) {
 			return 0;
@@ -129,11 +125,11 @@ namespace MemX {
 		} while (head.InLoadOrderLinks.Flink != LastEntry);
 
 		return 0;
-	}
+	 }
 
-	#pragma warning(push)
-	#pragma warning(disable : 4409)
-	MEMX_API DWORD64 __cdecl Wow64NtCallExt::X64CallVa(DWORD64 func, int argC, ...) {
+	 #pragma warning(push)
+	 #pragma warning(disable : 4409)
+	 DWORD64 __cdecl Wow64NtCallExt::X64CallVa(DWORD64 func, int argC, ...) {
 		if (func == 0) return 0;
 
 		va_list args;
@@ -159,8 +155,10 @@ namespace MemX {
 
 			and    esp, 0xFFFFFFF0
 
+			//切换64位
 			x64_start
 
+			//压入前四个参数
 	  rex_w mov    ecx, _rcx.dw[0]
 	  rex_w mov    edx, _rdx.dw[0]
 			
@@ -171,11 +169,13 @@ namespace MemX {
 			x64_pop(r9)
 			
 	  rex_w mov    eax, _argC.dw[0]
-
+			//压入剩余参数
 			test   al, 1
 			jnz    _no_adjust
 			sub    esp, 8
 			
+
+			//遵循Windows参数从右到左的规则，将edi寄存器移到最后一个参数
 		_no_adjust:
 			push   edi
 	  rex_w mov    edi, restArgs.dw[0]
@@ -190,11 +190,13 @@ namespace MemX {
 	  rex_w sub    edi, 8
 	  rex_w sub    eax, 1
 			jmp    _ls
-			
+
+			//预留栈空间
 		_ls_e:
 	  rex_w sub    esp, 0x20
 			call   func
 
+		  //恢复环境
 	  rex_w mov    ecx, _argC.dw[0]
 	  rex_w lea    esp, dword ptr[esp + 8 * ecx + 0x20]
 			pop    edi
@@ -214,49 +216,49 @@ namespace MemX {
 	}
 	#pragma warning(pop)
 
-	MEMX_API DWORD64 __cdecl Wow64NtCallExt::GetNtdll64() {
-		static DWORD64 _ntdll64 = 0;
-		if ( _ntdll64 != 0 ) {
-			return _ntdll64;
-		}
-		_ntdll64 = GetModuleBase64(L"ntdll.dll");
-		return _ntdll64;
-	}
+	 DWORD64 __cdecl Wow64NtCallExt::GetNtdll64() {
+		 static DWORD64 _ntdll64 = 0;
+		 if ( _ntdll64 != 0 ) {
+			 return _ntdll64;
+		 }
+		 _ntdll64 = GetModuleBase64(L"ntdll.dll");
+		 return _ntdll64;
+	 }
 
-	DWORD64 __cdecl Wow64NtCallExt::GetLdrGetProcedureAddress() {
-		DWORD64 dllBase = GetNtdll64();
-		if (!dllBase) {
-			return 0;
-		}
-		IMAGE_DOS_HEADER idh;
-		memcpy64(&idh, dllBase, sizeof(IMAGE_DOS_HEADER));
+	 DWORD64 __cdecl Wow64NtCallExt::GetLdrGetProcedureAddress() {
+		 DWORD64 dllBase = GetNtdll64();
+		 if ( !dllBase ) {
+			 return 0;
+		 }
+		 IMAGE_DOS_HEADER idh;
+		 memcpy64(&idh, dllBase, sizeof(IMAGE_DOS_HEADER));
 
-		IMAGE_NT_HEADERS64 inth;
-		memcpy64(&inth, dllBase + idh.e_lfanew, sizeof(IMAGE_NT_HEADERS64));
+		 IMAGE_NT_HEADERS64 inth;
+		 memcpy64(&inth, dllBase + idh.e_lfanew, sizeof(IMAGE_NT_HEADERS64));
 
-		IMAGE_EXPORT_DIRECTORY ied;
-		memcpy64(&ied, dllBase + inth.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress, sizeof(IMAGE_EXPORT_DIRECTORY));
+		 IMAGE_EXPORT_DIRECTORY ied;
+		 memcpy64(&ied, dllBase + inth.OptionalHeader.DataDirectory[ IMAGE_DIRECTORY_ENTRY_EXPORT ].VirtualAddress, sizeof(IMAGE_EXPORT_DIRECTORY));
 
-		std::vector<DWORD> rvaTable(ied.NumberOfFunctions, 0);
-		std::vector<DWORD> nameTable(ied.NumberOfNames, 0);
-		std::vector<WORD> ordTable(ied.NumberOfNames, 0);
+		 std::vector<DWORD> rvaTable(ied.NumberOfFunctions, 0);
+		 std::vector<DWORD> nameTable(ied.NumberOfNames, 0);
+		 std::vector<WORD> ordTable(ied.NumberOfNames, 0);
 
-		memcpy64(rvaTable.data(), dllBase + ied.AddressOfFunctions, ied.NumberOfFunctions * sizeof(DWORD));
-		memcpy64(nameTable.data(), dllBase + ied.AddressOfNames, ied.NumberOfNames * sizeof(DWORD));
-		memcpy64(ordTable.data(), dllBase + ied.AddressOfNameOrdinals, ied.NumberOfNames * sizeof(WORD));
+		 memcpy64(rvaTable.data(), dllBase + ied.AddressOfFunctions, ied.NumberOfFunctions * sizeof(DWORD));
+		 memcpy64(nameTable.data(), dllBase + ied.AddressOfNames, ied.NumberOfNames * sizeof(DWORD));
+		 memcpy64(ordTable.data(), dllBase + ied.AddressOfNameOrdinals, ied.NumberOfNames * sizeof(WORD));
 
-		for (DWORD i = 0; i < ied.NumberOfNames; i++) {
-			char funcName[256] = { 0 };
-			memcpy64(funcName, dllBase + nameTable[i], sizeof(funcName) - 1);
-			if (strcmp(funcName, "LdrGetProcedureAddress") != 0)
-				continue;
-			else
-				return dllBase + rvaTable[ordTable[i]];
-		}
-		return 0;
-	}
+		 for ( DWORD i = 0; i < ied.NumberOfNames; i++ ) {
+			 char funcName[ 256 ] = { 0 };
+			 memcpy64(funcName, dllBase + nameTable[ i ], sizeof(funcName) - 1);
+			 if ( strcmp(funcName, "LdrGetProcedureAddress") != 0 )
+				 continue;
+			 else
+				 return dllBase + rvaTable[ ordTable[ i ] ];
+		 }
+		 return 0;
+	 }
 
-	MEMX_API DWORD64 __cdecl Wow64NtCallExt::GetTeb64() {
+	 DWORD64 __cdecl Wow64NtCallExt::GetTeb64() {
 		Reg64 _teb64 = { 0 };
 		#ifdef _M_IX86
 		__asm {
@@ -269,7 +271,7 @@ namespace MemX {
 		return _teb64.v;
 	}
 
-	MEMX_API DWORD64 __cdecl Wow64NtCallExt::GetPeb64() {
+	 DWORD64 __cdecl Wow64NtCallExt::GetPeb64() {
 		Reg64 _peb64 = { 0 };
 	#ifdef _M_IX86
 		__asm {

@@ -3,7 +3,6 @@
 #include "../Common/WinApi/WinHeaders.h"
 #include "../Common/Types/Type.h"
 #include "../Common/NtApi/NtResult.h"
-#include "../Config.h"
 
 #include <vector>
 
@@ -12,16 +11,16 @@ namespace MemX {
 
 	class ProcessMemory {
 		public:
-		MEMX_API ProcessMemory(class Process* process);
-		MEMX_API ~ProcessMemory();
+		 ProcessMemory(class Process* process);
+		 ~ProcessMemory();
 
-		MEMX_API NTSTATUS Read(PTR_T baseAddr, PVOID pResult, size_t dwSize, bool skipUncommited);
+		 NTSTATUS Read(PTR_T baseAddr, PVOID pResult, size_t dwSize, bool skipUncommited);
 
-		MEMX_API NTSTATUS Read(const std::vector<PTR_T>& addrList, PVOID pResult, size_t dwSize, bool skipUncommited);
+		 NTSTATUS Read(const std::vector<PTR_T>& addrList, PVOID pResult, size_t dwSize, bool skipUncommited);
 
-		MEMX_API NTSTATUS Write(PTR_T baseAddr, LPCVOID pData, size_t dwSize);
+		 NTSTATUS Write(PTR_T baseAddr, LPCVOID pData, size_t dwSize);
 
-		MEMX_API NTSTATUS Write(const std::vector<PTR_T>& addrList, LPCVOID pData, size_t dwSize);
+		 NTSTATUS Write(const std::vector<PTR_T>& addrList, LPCVOID pData, size_t dwSize);
 
 		template<typename T>
 		NtResult<T> Read(PTR_T baseAddr) {
@@ -33,7 +32,7 @@ namespace MemX {
 		template<typename T>
 		NtResult<T> Read(std::vector<PTR_T>&& addList) {
 			auto pResult = std::make_unique<T>();
-			NTSTATUS status = Read(std::forward<std::vector<ptr_t>>(addList), pResult.get(), sizeof(T), false);
+			NTSTATUS status = Read(std::forward<std::vector<PTR_T>>(addList), pResult.get(), sizeof(T), false);
 			return NtResult<T>(*pResult, status);
 		}
 
@@ -47,7 +46,6 @@ namespace MemX {
 		NTSTATUS Write(const std::vector<PTR_T>&& addrList, const T& data) {
 			return Write(std::forward<std::vector<ptr_t>>(addrList), reinterpret_cast<LPCVOID>(&data), sizeof(T));
 		}
-
 
 
 		private:

@@ -8,13 +8,13 @@
 namespace MemX {
 	class ProcessCore {
 		public:
-		MEMX_API BOOL isWow64() const { return _runtime->isTargetWow64(); }// TODO: Implement isWow64 check
-		MEMX_API DWORD getTargetPeb(PEB32* peb) const { return _runtime->GetTargetPeb(peb); }
-		MEMX_API DWORD64 getTargetPeb(PEB64* peb) const { return _runtime->GetTargetPeb(peb); }
-		MEMX_API DWORD getPid() const { return this->_pid; }
-		MEMX_API HANDLE getHandle() const { return this->_hProcess; }
-		MEMX_API Runtime* getRuntime() const { return _runtime.get(); }
-		MEMX_API BOOL isActive() const { return _active; }
+		 BOOL isWow64() const { return _runtime->isTargetWow64(); }// TODO: Implement isWow64 check
+		 DWORD getTargetPeb(PEB32* peb) const { return _runtime->GetTargetPeb(peb); }
+		 DWORD64 getTargetPeb(PEB64* peb) const { return _runtime->GetTargetPeb(peb); }
+		 DWORD getPid() const { return this->_pid; }
+		 HANDLE getHandle() const { return this->_hProcess; }
+		 Runtime* getRuntime() const { return _runtime.get(); }
+		 BOOL isActive() const { return _active; }
 		
 
 		private:

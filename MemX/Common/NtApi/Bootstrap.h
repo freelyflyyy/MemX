@@ -6,7 +6,7 @@ namespace MemX {
 	std::atomic<bool> done(false);
 
 	//Promote permissions
-	MEMX_API NTSTATUS EnablePrivilege(LPCWSTR lpszPrivilege) {
+	NTSTATUS EnablePrivilege(LPCWSTR lpszPrivilege) {
 		HANDLE hToken = nullptr;
 		TOKEN_PRIVILEGES tp = { 0 };
 		LUID luid;
@@ -45,7 +45,7 @@ namespace MemX {
 	}
 
 
-	MEMX_API void Bootstrap() {
+	void Bootstrap() {
 		//Ensure that Nt functions are loaded only once
 		bool expected = false;
 		if ( done.compare_exchange_strong(expected, true) ) {

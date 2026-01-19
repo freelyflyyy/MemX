@@ -1,6 +1,7 @@
 #pragma once
 #include "ProcessMemory.h"
 #include "ProcessCore.h"
+#include "ProcessModule.h"
 #include "../Common/WinApi/WinHeaders.h"
 #include "../Common/NtApi/NtResult.h"
 
@@ -20,17 +21,6 @@ namespace MemX {
 		bool operator < (const ProcessInfo& other) const {
 			return this->pid < other.pid;
 		}
-	};
-
-	/// <summary>
-	/// Handle information
-	/// </summary>
-	struct HandleInfo {
-		HANDLE handle = nullptr;
-		uint32_t access = 0;
-		uint32_t flags = 0;
-
-		std::wstring name;
 	};
 
 	#define DEFAULT_NORMAL_PROCESS_ACCESS \
@@ -54,22 +44,23 @@ namespace MemX {
 
 	class Process {
 		public:
-		MEMX_API Process();
-		MEMX_API ~Process(void);
+		 Process();
+		 ~Process(void);
 
 		
-		MEMX_API NTSTATUS Catch(DWORD pid, DWORD access = DEFAULT_NORMAL_PROCESS_ACCESS);
+		 NTSTATUS Catch(DWORD pid, DWORD access = DEFAULT_NORMAL_PROCESS_ACCESS);
 
-		MEMX_API NTSTATUS Catch(const wchar_t* processName, DWORD access = DEFAULT_NORMAL_PROCESS_ACCESS);
+		 NTSTATUS Catch(const wchar_t* processName, DWORD access = DEFAULT_NORMAL_PROCESS_ACCESS);
 
-		MEMX_API NTSTATUS Catch(HANDLE proHandle);
+		 NTSTATUS Catch(HANDLE proHandle);
 
-		MEMX_API NTSTATUS Drop();
+		 NTSTATUS Drop();
 
-		MEMX_API static NTSTATUS GetPidByName(const std::wstring& processName);
+		 static NTSTATUS GetPidByName(const std::wstring& processName);
 
-		MEMX_API ProcessMemory& Memory() { return _memory; }
-		MEMX_API ProcessCore& Core() { return _core; }
+		 ProcessMemory& Memory() { return _memory; }
+		 ProcessCore& Core() { return _core; }
+		 ProcessModule& Module() { return _module; }
 
 		private:
 		Process(const Process&) = delete;
@@ -80,5 +71,6 @@ namespace MemX {
 		// Ensure ProcessCore is declared before ProcessMemory so it is constructed first.
 		ProcessCore _core;
 		ProcessMemory _memory;
+		ProcessModule _module;
 	};
 }
