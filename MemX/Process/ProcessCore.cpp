@@ -53,7 +53,8 @@ namespace MemX {
 
 	NTSTATUS ProcessCore::Init() {
 		ArchitectureApi texApi(_hProcess);
-		BOOL wowSrc = texApi.GetWow64Barrier().sourceWow64;
+		_arch = texApi.GetArchitechure();
+		BOOL wowSrc = _arch.sourceWow64;
 		if ( !wowSrc ) {
 			_runtime = std::make_unique<X64Runtime>(_hProcess);
 		} else {

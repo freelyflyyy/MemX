@@ -3,7 +3,6 @@
 #include "MemX/Common/Utils/StringUtils.h"
 #include "../Common/NtApi/NtApi.h"
 #include "../Common/NtApi/NtCallExt.h"
-#include <iostream>
 
 namespace MemX {
 	Wow64Runtime::Wow64Runtime(HANDLE hProcess) : Runtime(hProcess) {
@@ -15,9 +14,6 @@ namespace MemX {
 	NTSTATUS Wow64Runtime::GetTargetPeb(PEB32* peb) {
 		if ( !peb ) {
 			return STATUS_INVALID_PARAMETER;
-		}
-		if ( _barrier.targetWow64 == false ) {
-			return 0;
 		}
 		PTR_T pbi = 0;
 		ULONG bytes = 0;
@@ -110,6 +106,36 @@ namespace MemX {
 		}
 		NTSTATUS ntRet = CALL64_FUNC(pNtQueryEx, 6, (DWORD64) _hProcess, lpAddress, 0ULL, (DWORD64) lpBuffer, (DWORD64) sizeof(MEMORY_BASIC_INFORMATION64), 0ull);
 		return ntRet;
+	}
+
+	NTSTATUS Wow64Runtime::FindModuleByLdrList32(LPWSTR lpModuleName, ModuleInfoPtr& pModule) {
+		std::vector<ModuleInfoPtr> pModulesEntry;
+		NTSTATUS status = GetAllModulesByLdrList32(&pModulesEntry);
+		if ( !NT_SUCCESS(status) ) {
+			return status;
+		}
+		for ( const auto& module : pModulesEntry ) {
+			if ( module->fullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
+				pModule = module;
+				return STATUS_SUCCESS;
+			}
+		}
+		return STATUS_NOT_FOUND;
+	}
+
+	NTSTATUS Wow64Runtime::FindModuleByLdrList64(LPWSTR lpModuleName, ModuleInfoPtr& pModule) {
+		std::vector<ModuleInfoPtr> pModulesEntry;
+		NTSTATUS status = GetAllModulesByLdrList64(&pModulesEntry);
+		if ( !NT_SUCCESS(status) ) {
+			return status;
+		}
+		for ( const auto& module : pModulesEntry ) {
+			if ( module->fullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
+				pModule = module;
+				return STATUS_SUCCESS;
+			}
+		}
+		return STATUS_NOT_FOUND;
 	}
 
 	NTSTATUS Wow64Runtime::GetAllModulesByLdrList32(std::vector<ModuleInfoPtr>* pModulesEntry) {
@@ -212,7 +238,16 @@ namespace MemX {
 	NTSTATUS Wow64Runtime::GetAllModulesBySections64(std::vector<ModuleInfoPtr>* pModulesEntry) {
 		return NTSTATUS();
 	}
-	NTSTATUS Wow64Runtime::GetAllModulesT(std::vector<ModuleInfoPtr>* pModulesEntry, ModuleSearchMode& moduleSearchMode) {
-		return NTSTATUS();
+
+	NTSTATUS Wow64Runtime::GetAllModules32(std::vector<ModuleInfoPtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) {
+		switch ( moduleSearchMode ) {
+		case SCAN_LDR:
+			return GetAllModulesByLdrList32(pModulesEntry);
+
+		default:
+			break;
+		}
+		return STATUS_UNSUCCESSFUL;
 	}
+
 }

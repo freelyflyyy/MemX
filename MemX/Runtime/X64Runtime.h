@@ -22,6 +22,10 @@ namespace MemX {
 
 		virtual NTSTATUS VirtualQueryExT(PTR_T lpAddress, PMEMORY_BASIC_INFORMATION64 lpBuffer) override;
 
+		virtual NTSTATUS FindModuleByLdrList32(LPWSTR lpModuleName, ModuleInfoPtr& pModule) override;
+
+		virtual NTSTATUS FindModuleByLdrList64(LPWSTR lpModuleName, ModuleInfoPtr& pModule) override;
+
 		virtual NTSTATUS GetAllModulesByLdrList32(std::vector<ModuleInfoPtr>* pModulesEntry) override;
 
 		virtual NTSTATUS GetAllModulesByLdrList64(std::vector<ModuleInfoPtr>* pModulesEntry) override;
@@ -34,6 +38,6 @@ namespace MemX {
 
 		virtual NTSTATUS GetAllModulesBySections64(std::vector<ModuleInfoPtr>* pModulesEntry) override;
 
-		virtual NTSTATUS GetAllModulesT(std::vector<ModuleInfoPtr>* pModulesEntry, ModuleSearchMode& moduleSearchMode) override;
+		virtual NTSTATUS GetAllModules32(std::vector<ModuleInfoPtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) override;
 	};
 }

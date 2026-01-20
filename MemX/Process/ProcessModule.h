@@ -11,9 +11,7 @@ namespace MemX {
 		ProcessModule(class Process& process);
 		~ProcessModule();
 
-		 BOOL IsCached(const std::wstring& moduleName);
-
-		 ModuleInfoPtr GetMainModule();
+		ModuleInfoPtr GetMainModule();
 
 		private:
 		ProcessModule(const ProcessModule&) = delete;
@@ -26,5 +24,6 @@ namespace MemX {
 
 		protected:
 		std::shared_mutex _mutex;
+		std::unordered_map<std::wstring, ModuleInfoPtr> _cache;
 	};
 }

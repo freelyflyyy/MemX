@@ -20,16 +20,8 @@ namespace MemX {
 		DWORD dw[ 2 ];
 	};
 
-	enum ArchBarrier {
-		ARCHITECTURE_32_32,//Both processes are Wow64
-		ARCHITECTURE_64_64,//Both processes are x64
-		ARCHITECTURE_64_32,//Control Wow64 process from x64;
-		ARCHITECTURE_32_64,//Control x64 process from Wow64 
-		ARCHITECTURE_UNSUPPORTED
-	};
 
-	struct Wow64Barrier {
-		ArchBarrier archType = ARCHITECTURE_UNSUPPORTED;
+	struct ARCHITECHURE {
 		bool sourceWow64 = false;
 		bool targetWow64 = false;
 		bool mismatch = false;
@@ -55,9 +47,9 @@ namespace MemX {
 
 	using ModuleInfoPtr = std::shared_ptr<const ModuleInfo>;
 
-	enum ModuleSearchMode {
-		LdrList,
-		SectionScan,
-		ForceScan
+	enum MODULE_SEARCH_MODE {
+		SCAN_LDR,
+		SCAN_SECTION,
+		SCAN_FROCE
 	};
 }

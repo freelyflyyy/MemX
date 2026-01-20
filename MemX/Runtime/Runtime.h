@@ -11,8 +11,6 @@ namespace MemX {
 	class Runtime {
 		public:
 		 Runtime(HANDLE hProcess) : _hProcess(hProcess) {
-			ArchitectureApi texApi(hProcess);
-			_barrier = texApi.GetWow64Barrier();
 		};
 		 ~Runtime() {};
 
@@ -22,10 +20,6 @@ namespace MemX {
 
 		PTR_T maxAddr64() {
 			return 0x7FFFFFFFFFFF;
-		}
-
-		BOOL isTargetWow64() const {
-			return _barrier.targetWow64;
 		}
 
 		/// <summary>
@@ -62,6 +56,10 @@ namespace MemX {
 
 		virtual NTSTATUS VirtualQueryExT(PTR_T lpAddress, PMEMORY_BASIC_INFORMATION64 lpBuffer) = 0;
 
+		virtual NTSTATUS FindModuleByLdrList32(LPWSTR lpModuleName, ModuleInfoPtr& pModule) = 0;
+
+		virtual NTSTATUS FindModuleByLdrList64(LPWSTR lpModuleName, ModuleInfoPtr& pModule) = 0;
+
 		virtual NTSTATUS GetAllModulesByLdrList32(std::vector<ModuleInfoPtr>* pModulesEntry) = 0;
 
 		virtual NTSTATUS GetAllModulesByLdrList64(std::vector<ModuleInfoPtr>* pModulesEntry) = 0;
@@ -74,11 +72,10 @@ namespace MemX {
 
 		virtual NTSTATUS GetAllModulesBySections64(std::vector<ModuleInfoPtr>* pModulesEntry) = 0;
 
-		virtual NTSTATUS GetAllModulesT(std::vector<ModuleInfoPtr>* pModulesEntry, ModuleSearchMode& moduleSearchMode) = 0;
+		virtual NTSTATUS GetAllModules32(std::vector<ModuleInfoPtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) = 0;
 
 		protected:
 		HANDLE _hProcess;
-		Wow64Barrier _barrier;
 	};
 }
 

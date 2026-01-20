@@ -1,4 +1,5 @@
 #include "X64Runtime.h"
+#include "../Common/Utils/StringUtils.h"
 #include "../Common/NtApi/NtApi.h"
 
 namespace MemX {
@@ -11,9 +12,6 @@ namespace MemX {
 	NTSTATUS X64Runtime::GetTargetPeb(PEB32* peb) {
 		if ( !peb ) {
 			return STATUS_INVALID_PARAMETER;
-		}
-		if ( _barrier.targetWow64 == false ) {
-			return 0;
 		}
 		PTR_T pbi = 0;
 		ULONG bytes = 0;
@@ -86,12 +84,124 @@ namespace MemX {
 		return dwRet != 0 ? STATUS_SUCCESS : GetLastNtStatus();
 	}
 
+	NTSTATUS X64Runtime::FindModuleByLdrList32(LPWSTR lpModuleName, ModuleInfoPtr& pModule) {
+		std::vector<ModuleInfoPtr> pModulesEntry;
+		NTSTATUS status = GetAllModulesByLdrList32(&pModulesEntry);
+		if ( !NT_SUCCESS(status) ) {
+			return status;
+		}
+		for ( const auto& module : pModulesEntry ) {
+			if ( module->fullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
+				pModule = module;
+				return STATUS_SUCCESS;
+			}
+		}
+		return STATUS_NOT_FOUND;
+	}
+
+	NTSTATUS X64Runtime::FindModuleByLdrList64(LPWSTR lpModuleName, ModuleInfoPtr& pModule) {
+		std::vector<ModuleInfoPtr> pModulesEntry;
+		NTSTATUS status = GetAllModulesByLdrList64(&pModulesEntry);
+		if ( !NT_SUCCESS(status) ) {
+			return status;
+		}
+		for ( const auto& module : pModulesEntry ) {
+			if ( module->fullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
+				pModule = module;
+				return STATUS_SUCCESS;
+			}
+		}
+		return STATUS_NOT_FOUND;
+	}
+
+
 	NTSTATUS X64Runtime::GetAllModulesByLdrList32(std::vector<ModuleInfoPtr>* pModulesEntry) {
-		return NTSTATUS();
+		NTSTATUS status = STATUS_SUCCESS;
+		if ( !pModulesEntry ) return STATUS_INVALID_PARAMETER;
+		pModulesEntry->clear();
+
+		PEB32 peb32 = { 0 };
+		GetTargetPeb(&peb32);
+
+		PEB_LDR_DATA32 ldr32;
+		if ( ReadProcessMemoryT(peb32.Ldr, &ldr32, sizeof(PEB_LDR_DATA32), NULL) != STATUS_SUCCESS ) {
+			return STATUS_ACCESS_VIOLATION;
+		}
+
+		DWORD head = ldr32.InLoadOrderModuleList.Flink;
+		DWORD end = peb32.Ldr + offsetof(PEB_LDR_DATA32, InLoadOrderModuleList);
+
+		while ( head != end && head != 0 ) {
+			LDR_DATA_TABLE_ENTRY32 ldrEntry32;
+
+			if ( ReadProcessMemoryT(head, &ldrEntry32, sizeof(LDR_DATA_TABLE_ENTRY32), NULL) != STATUS_SUCCESS ) {
+				break;
+			}
+
+			wchar_t moduleFullPath[ 512 ] = { 0 };
+			ReadProcessMemoryT(ldrEntry32.FullDllName.Buffer, moduleFullPath, ldrEntry32.FullDllName.Length, NULL);
+
+			ModuleInfo module;
+			module.baseAddr = ldrEntry32.DllBase;
+			module.uSize = ldrEntry32.SizeOfImage;
+			module.fullPath = ToLower(moduleFullPath);
+			module.fullName = ToLower(getPathName(module.fullPath));
+			module.isX86 = TRUE;
+			module.isManual = FALSE;
+			module.ldrPoint = head;
+
+			pModulesEntry->emplace_back(std::make_shared<ModuleInfo>(module));
+
+			// 往后挪：读取 Flink
+			head = ldrEntry32.InLoadOrderLinks.Flink;
+		}
+
+		return STATUS_SUCCESS;
 	}
 
 	NTSTATUS X64Runtime::GetAllModulesByLdrList64(std::vector<ModuleInfoPtr>* pModulesEntry) {
-		return NTSTATUS();
+		NTSTATUS status = STATUS_SUCCESS;
+		if ( !pModulesEntry ) return STATUS_INVALID_PARAMETER;
+		pModulesEntry->clear();
+
+		// 获取 64位 PEB
+		PEB64 peb64 = { 0 };
+		GetTargetPeb(&peb64);
+
+		//读取 LDR 数据
+		PEB_LDR_DATA64 ldr64;
+		if ( ReadProcessMemoryT(peb64.Ldr, &ldr64, sizeof(PEB_LDR_DATA64), NULL) != STATUS_SUCCESS ) {
+			return STATUS_ACCESS_VIOLATION;
+		}
+
+		DWORD64 head = ldr64.InLoadOrderModuleList.Flink;
+		DWORD64 end = peb64.Ldr + offsetof(PEB_LDR_DATA64, InLoadOrderModuleList);
+
+		// 开始遍历
+		while ( head != end && head != 0 ) {
+			LDR_DATA_TABLE_ENTRY64 ldrEntry64;
+			if ( ReadProcessMemoryT(head, &ldrEntry64, sizeof(LDR_DATA_TABLE_ENTRY64), NULL) != STATUS_SUCCESS ) {
+				break;
+			}
+			wchar_t moduleFullPath[ 512 ] = { 0 };
+			ReadProcessMemoryT(ldrEntry64.FullDllName.Buffer, moduleFullPath, ldrEntry64.FullDllName.Length, NULL);
+
+			ModuleInfo module;
+			module.baseAddr = ldrEntry64.DllBase;
+			module.uSize = ldrEntry64.SizeOfImage;
+			module.fullPath = ToLower(moduleFullPath);
+			module.fullName = ToLower(getPathName(module.fullPath));
+			module.isX86 = FALSE;
+			module.isManual = FALSE;
+			module.ldrPoint = head;
+
+			pModulesEntry->emplace_back(std::make_shared<ModuleInfo>(module));
+
+			// 往后挪
+			head = ldrEntry64.InLoadOrderLinks.Flink;
+		}
+
+		return STATUS_SUCCESS;
 	}
 
 	NTSTATUS X64Runtime::GetAllModulesByPEHeaders32(std::vector<ModuleInfoPtr>* pModulesEntry) {
@@ -110,8 +220,14 @@ namespace MemX {
 		return NTSTATUS();
 	}
 
-	NTSTATUS X64Runtime::GetAllModulesT(std::vector<ModuleInfoPtr>* pModulesEntry, ModuleSearchMode& moduleSearchMode) {
-		return NTSTATUS();
-	}
+	NTSTATUS X64Runtime::GetAllModules32(std::vector<ModuleInfoPtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) {
+		switch ( moduleSearchMode ) {
+		case SCAN_LDR:
+			return GetAllModulesByLdrList32(pModulesEntry);
 
+		default:
+			break;
+		}
+		return STATUS_UNSUCCESSFUL;
+	}
 }

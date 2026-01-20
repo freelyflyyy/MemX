@@ -16,28 +16,18 @@ namespace MemX {
 			IsWow64Process(GetCurrentProcess(), (BOOL*) &isSourceWow64);
 			IsWow64Process(_hProcess, (BOOL*) &isTargetWow64);
 
-			_wow64Barrier.sourceWow64 = (isSourceWow64 == TRUE);
-			_wow64Barrier.targetWow64 = (isTargetWow64 == TRUE);
-
-			if ( isSourceWow64 == TRUE && isTargetWow64 == TRUE ) {
-				_wow64Barrier.archType = ARCHITECTURE_32_32;
-			} else if ( isSourceWow64 == TRUE && isTargetWow64 == FALSE ) {
-				_wow64Barrier.archType = ARCHITECTURE_64_32;
-			} else if ( isSourceWow64 == FALSE && isTargetWow64 == FALSE ) {
-				_wow64Barrier.archType = ARCHITECTURE_64_64;
-			} else {
-				_wow64Barrier.archType = ARCHITECTURE_32_64;
-			}
+			_arch.sourceWow64 = (isSourceWow64 == TRUE);
+			_arch.targetWow64 = (isTargetWow64 == TRUE);
 		}
 		~ArchitectureApi() {
 
 		}
 
-		const Wow64Barrier& GetWow64Barrier() const { return _wow64Barrier; }
+		const ARCHITECHURE& GetArchitechure() const { return _arch; }
 		uint32_t GetPageSize() const { return _dwPageSize; }
 
 		private:
-		Wow64Barrier _wow64Barrier;
+		ARCHITECHURE _arch;
 		uint32_t _dwPageSize;
 	};
 }
