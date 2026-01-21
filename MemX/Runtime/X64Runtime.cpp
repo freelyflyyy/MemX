@@ -80,18 +80,18 @@ namespace MemX {
 	}
 
 	NTSTATUS X64Runtime::VirtualQueryExT(PTR_T lpAddress, PMEMORY_BASIC_INFORMATION64 lpBuffer) {
-		SIZE_T dwRet = VirtualQueryEx(_hProcess, reinterpret_cast<LPCVOID>(lpAddress), (PMEMORY_BASIC_INFORMATION)lpBuffer, sizeof(MEMORY_BASIC_INFORMATION64));
+		SIZE_T dwRet = VirtualQueryEx(_hProcess, reinterpret_cast<LPCVOID>(lpAddress), (PMEMORY_BASIC_INFORMATION) lpBuffer, sizeof(MEMORY_BASIC_INFORMATION64));
 		return dwRet != 0 ? STATUS_SUCCESS : GetLastNtStatus();
 	}
 
-	NTSTATUS X64Runtime::FindModuleByLdrList32(LPWSTR lpModuleName, ModuleInfoPtr& pModule) {
-		std::vector<ModuleInfoPtr> pModulesEntry;
+	NTSTATUS X64Runtime::FindModuleByLdrList32(LPWSTR lpModuleName, ModulePtr& pModule) {
+		std::vector<ModulePtr> pModulesEntry;
 		NTSTATUS status = GetAllModulesByLdrList32(&pModulesEntry);
 		if ( !NT_SUCCESS(status) ) {
 			return status;
 		}
 		for ( const auto& module : pModulesEntry ) {
-			if ( module->fullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
+			if ( module->FullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
 				pModule = module;
 				return STATUS_SUCCESS;
 			}
@@ -99,14 +99,14 @@ namespace MemX {
 		return STATUS_NOT_FOUND;
 	}
 
-	NTSTATUS X64Runtime::FindModuleByLdrList64(LPWSTR lpModuleName, ModuleInfoPtr& pModule) {
-		std::vector<ModuleInfoPtr> pModulesEntry;
+	NTSTATUS X64Runtime::FindModuleByLdrList64(LPWSTR lpModuleName, ModulePtr& pModule) {
+		std::vector<ModulePtr> pModulesEntry;
 		NTSTATUS status = GetAllModulesByLdrList64(&pModulesEntry);
 		if ( !NT_SUCCESS(status) ) {
 			return status;
 		}
 		for ( const auto& module : pModulesEntry ) {
-			if ( module->fullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
+			if ( module->FullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
 				pModule = module;
 				return STATUS_SUCCESS;
 			}
@@ -115,7 +115,7 @@ namespace MemX {
 	}
 
 
-	NTSTATUS X64Runtime::GetAllModulesByLdrList32(std::vector<ModuleInfoPtr>* pModulesEntry) {
+	NTSTATUS X64Runtime::GetAllModulesByLdrList32(std::vector<ModulePtr>* pModulesEntry) {
 		NTSTATUS status = STATUS_SUCCESS;
 		if ( !pModulesEntry ) return STATUS_INVALID_PARAMETER;
 		pModulesEntry->clear();
@@ -141,16 +141,16 @@ namespace MemX {
 			wchar_t moduleFullPath[ 512 ] = { 0 };
 			ReadProcessMemoryT(ldrEntry32.FullDllName.Buffer, moduleFullPath, ldrEntry32.FullDllName.Length, NULL);
 
-			ModuleInfo module;
-			module.baseAddr = ldrEntry32.DllBase;
-			module.uSize = ldrEntry32.SizeOfImage;
-			module.fullPath = ToLower(moduleFullPath);
-			module.fullName = ToLower(getPathName(module.fullPath));
-			module.isX86 = TRUE;
+			Module module;
+			module.BaseAddress = ldrEntry32.DllBase;
+			module.Size = ldrEntry32.SizeOfImage;
+			module.FullPath = ToLower(moduleFullPath);
+			module.FullName = ToLower(getPathName(module.FullPath));
+			module.IsX86 = FALSE;
 			module.isManual = FALSE;
-			module.ldrPoint = head;
+			module.LdrNode = head;
 
-			pModulesEntry->emplace_back(std::make_shared<ModuleInfo>(module));
+			pModulesEntry->emplace_back(std::make_shared<Module>(module));
 
 			// Õ˘∫Û≈≤£∫∂¡»° Flink
 			head = ldrEntry32.InLoadOrderLinks.Flink;
@@ -159,7 +159,7 @@ namespace MemX {
 		return STATUS_SUCCESS;
 	}
 
-	NTSTATUS X64Runtime::GetAllModulesByLdrList64(std::vector<ModuleInfoPtr>* pModulesEntry) {
+	NTSTATUS X64Runtime::GetAllModulesByLdrList64(std::vector<ModulePtr>* pModulesEntry) {
 		NTSTATUS status = STATUS_SUCCESS;
 		if ( !pModulesEntry ) return STATUS_INVALID_PARAMETER;
 		pModulesEntry->clear();
@@ -186,16 +186,16 @@ namespace MemX {
 			wchar_t moduleFullPath[ 512 ] = { 0 };
 			ReadProcessMemoryT(ldrEntry64.FullDllName.Buffer, moduleFullPath, ldrEntry64.FullDllName.Length, NULL);
 
-			ModuleInfo module;
-			module.baseAddr = ldrEntry64.DllBase;
-			module.uSize = ldrEntry64.SizeOfImage;
-			module.fullPath = ToLower(moduleFullPath);
-			module.fullName = ToLower(getPathName(module.fullPath));
-			module.isX86 = FALSE;
+			Module module;
+			module.BaseAddress = ldrEntry64.DllBase;
+			module.Size = ldrEntry64.SizeOfImage;
+			module.FullPath = ToLower(moduleFullPath);
+			module.FullName = ToLower(getPathName(module.FullPath));
+			module.IsX86 = FALSE;
 			module.isManual = FALSE;
-			module.ldrPoint = head;
+			module.LdrNode = head;
 
-			pModulesEntry->emplace_back(std::make_shared<ModuleInfo>(module));
+			pModulesEntry->emplace_back(std::make_shared<Module>(module));
 
 			// Õ˘∫Û≈≤
 			head = ldrEntry64.InLoadOrderLinks.Flink;
@@ -204,27 +204,44 @@ namespace MemX {
 		return STATUS_SUCCESS;
 	}
 
-	NTSTATUS X64Runtime::GetAllModulesByPEHeaders32(std::vector<ModuleInfoPtr>* pModulesEntry) {
+	NTSTATUS X64Runtime::GetAllModulesByPEHeaders32(std::vector<ModulePtr>* pModulesEntry) {
 		return NTSTATUS();
 	}
 
-	NTSTATUS X64Runtime::GetAllModulesByPEHeaders64(std::vector<ModuleInfoPtr>* pModulesEntry) {
+	NTSTATUS X64Runtime::GetAllModulesByPEHeaders64(std::vector<ModulePtr>* pModulesEntry) {
 		return NTSTATUS();
 	}
 
-	NTSTATUS X64Runtime::GetAllModulesBySections32(std::vector<ModuleInfoPtr>* pModulesEntry) {
+	NTSTATUS X64Runtime::GetAllModulesBySections32(std::vector<ModulePtr>* pModulesEntry) {
 		return NTSTATUS();
 	}
 
-	NTSTATUS X64Runtime::GetAllModulesBySections64(std::vector<ModuleInfoPtr>* pModulesEntry) {
+	NTSTATUS X64Runtime::GetAllModulesBySections64(std::vector<ModulePtr>* pModulesEntry) {
 		return NTSTATUS();
 	}
 
-	NTSTATUS X64Runtime::GetAllModules32(std::vector<ModuleInfoPtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) {
+	NTSTATUS X64Runtime::GetAllModules32(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) {
 		switch ( moduleSearchMode ) {
 		case SCAN_LDR:
 			return GetAllModulesByLdrList32(pModulesEntry);
+		case SCAN_SECTION:
+			return GetAllModulesBySections32(pModulesEntry);
+		case SCAN_PEHEADER:
+			return GetAllModulesByPEHeaders32(pModulesEntry);
+		default:
+			break;
+		}
+		return STATUS_UNSUCCESSFUL;
+	}
 
+	NTSTATUS X64Runtime::GetAllModules64(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) {
+		switch ( moduleSearchMode ) {
+		case SCAN_LDR:
+			return GetAllModulesByLdrList64(pModulesEntry);
+		case SCAN_SECTION:
+			return GetAllModulesBySections64(pModulesEntry);
+		case SCAN_PEHEADER:
+			return GetAllModulesByPEHeaders64(pModulesEntry);
 		default:
 			break;
 		}

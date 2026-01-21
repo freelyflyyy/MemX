@@ -11,8 +11,12 @@ namespace MemX {
 		ProcessModule(class Process& process);
 		~ProcessModule();
 
-		ModuleInfoPtr GetMainModule();
+		ModulePtr GetMainModule();
 
+		ModulePtr GetModule(WCHAR* moduleName);
+
+		ModulePtr GetModule(WCHAR* moduleName, MODULE_SEARCH_MODE moduleSearchMode);
+		
 		private:
 		ProcessModule(const ProcessModule&) = delete;
 		ProcessModule& operator=(const ProcessModule&) = delete;
@@ -24,6 +28,6 @@ namespace MemX {
 
 		protected:
 		std::shared_mutex _mutex;
-		std::unordered_map<std::wstring, ModuleInfoPtr> _cache;
+		std::unordered_map<std::wstring, Module> _cache;
 	};
 }

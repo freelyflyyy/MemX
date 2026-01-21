@@ -1,13 +1,10 @@
 #include "Process.h"
-#include "../Common/NtApi/Bootstrap.h"
 
 namespace MemX {
     Process::Process() 
         :_core(),
         _memory(this),
         _module(*this) {
-        //Ensure weight lifting and successful initialization of kernel functions
-        //Bootstrap();
     }
     Process::~Process(void) {
     }
@@ -17,7 +14,7 @@ namespace MemX {
         return _core.Open(pid, access);
     }
 
-     NTSTATUS Process::Catch(const wchar_t* processName, DWORD access) {
+     NTSTATUS Process::Catch(wchar_t* processName, DWORD access) {
 		DWORD pid = GetPidByName(processName);
 		return pid >= 0 ? Catch(pid, access) : STATUS_NOT_FOUND;
     }

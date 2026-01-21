@@ -56,24 +56,25 @@ namespace MemX {
 
 		virtual NTSTATUS VirtualQueryExT(PTR_T lpAddress, PMEMORY_BASIC_INFORMATION64 lpBuffer) = 0;
 
-		virtual NTSTATUS FindModuleByLdrList32(LPWSTR lpModuleName, ModuleInfoPtr& pModule) = 0;
+		virtual NTSTATUS FindModuleByLdrList32(LPWSTR lpModuleName, ModulePtr& pModule) = 0;
 
-		virtual NTSTATUS FindModuleByLdrList64(LPWSTR lpModuleName, ModuleInfoPtr& pModule) = 0;
+		virtual NTSTATUS FindModuleByLdrList64(LPWSTR lpModuleName, ModulePtr& pModule) = 0;
 
-		virtual NTSTATUS GetAllModulesByLdrList32(std::vector<ModuleInfoPtr>* pModulesEntry) = 0;
+		virtual NTSTATUS GetAllModulesByLdrList32(std::vector<ModulePtr>* pModulesEntry) = 0;
 
-		virtual NTSTATUS GetAllModulesByLdrList64(std::vector<ModuleInfoPtr>* pModulesEntry) = 0;
+		virtual NTSTATUS GetAllModulesByLdrList64(std::vector<ModulePtr>* pModulesEntry) = 0;
 
-		virtual NTSTATUS GetAllModulesByPEHeaders32(std::vector<ModuleInfoPtr>* pModulesEntry) = 0;
+		virtual NTSTATUS GetAllModulesByPEHeaders32(std::vector<ModulePtr>* pModulesEntry) = 0;
 
-		virtual NTSTATUS GetAllModulesByPEHeaders64(std::vector<ModuleInfoPtr>* pModulesEntry) = 0;
+		virtual NTSTATUS GetAllModulesByPEHeaders64(std::vector<ModulePtr>* pModulesEntry) = 0;
 
-		virtual NTSTATUS GetAllModulesBySections32(std::vector<ModuleInfoPtr>* pModulesEntry) = 0;
+		virtual NTSTATUS GetAllModulesBySections32(std::vector<ModulePtr>* pModulesEntry) = 0;
 
-		virtual NTSTATUS GetAllModulesBySections64(std::vector<ModuleInfoPtr>* pModulesEntry) = 0;
+		virtual NTSTATUS GetAllModulesBySections64(std::vector<ModulePtr>* pModulesEntry) = 0;
 
-		virtual NTSTATUS GetAllModules32(std::vector<ModuleInfoPtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) = 0;
+		virtual NTSTATUS GetAllModules32(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) = 0;
 
+		virtual NTSTATUS GetAllModules64(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) = 0;
 		protected:
 		HANDLE _hProcess;
 	};

@@ -12,10 +12,10 @@ set(HEADER_INCLUDE "Common/WinApi/WinHeaders.h"
 					"Common/NtApi/NtCallExt.h"
 					"Common/NtApi/NtApi.h"
 					"Common/NtApi/NtResult.h"
+					"Common/Utils/Utils.h"
 					"Common/Utils/Wow64Utils.h"
 					"Common/Utils/StringUtils.h"
-					"Common/Types/Type.h"
-					"Common/NtApi/Bootstrap.h")
+					"Common/Types/Type.h")
 set(SOURCE_INCLUDE "Common/NtApi/NtCallExt.cpp")
 file(GLOB Inc ${HEADER_INCLUDE} ${SOURCE_INCLUDE})
 source_group(Inc FILES ${Inc})

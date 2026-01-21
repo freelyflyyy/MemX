@@ -3,6 +3,7 @@
 
 
 namespace MemX {
+
 	inline std::wstring getPathName(std::wstring fullPath) {
 		if ( fullPath.empty() ) {
 			return fullPath;
@@ -24,6 +25,7 @@ namespace MemX {
 		}
 		return fullPath;
 	}
+
 	inline std::wstring ToLower(std::wstring str) {
 		std::transform(str.begin(), str.end(), str.begin(), ::towlower);
 		return str;

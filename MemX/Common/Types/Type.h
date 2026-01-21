@@ -2,24 +2,14 @@
 
 #include "../WinApi/WinHeaders.h"
 #include "../NtApi/NtResult.h"
-#include <cstdint>
-#include <cassert>
-#include <optional>
-#include <memory>
 #include <string>
+#include <memory>
 
 namespace MemX {
 	template <typename T>
 	using result = NtResult<T>;
 
 	using PTR_T = UINT64;
-	using PTR_MODULE_T = PTR_T;
-
-	union Reg64 {
-		DWORD64 v;
-		DWORD dw[ 2 ];
-	};
-
 
 	struct ARCHITECHURE {
 		bool sourceWow64 = false;
@@ -27,29 +17,42 @@ namespace MemX {
 		bool mismatch = false;
 	};
 
-	struct ModuleInfo{
-		PTR_MODULE_T baseAddr;
-		std::wstring fullName;
-		std::wstring fullPath;
-		PTR_T ldrPoint;
+	struct Module{
+		PTR_T BaseAddress;
+		std::wstring FullName;
+		std::wstring FullPath;
+		PTR_T LdrNode;
 		BOOL isManual;
-		UINT32 uSize;
-		BOOL isX86;
+		UINT32 Size;
+		BOOL IsX86;
 
-		bool operator==(const ModuleInfo& other) const{
-			return this->baseAddr == other.baseAddr;
+		bool operator==(const Module& other) const{
+			return this->BaseAddress == other.BaseAddress;
 		}
 
 		bool isVild() const {
-			return baseAddr != 0;
+			return BaseAddress != 0;
 		}
 	};
 
-	using ModuleInfoPtr = std::shared_ptr<const ModuleInfo>;
+	using ModulePtr = std::shared_ptr<const Module>;
 
 	enum MODULE_SEARCH_MODE {
 		SCAN_LDR,
 		SCAN_SECTION,
-		SCAN_FROCE
+		SCAN_PEHEADER
 	};
+
+
+	//Basic Types with NtResult wrapper
+	using MxByte = NtResult<BYTE>;
+	using MxBool = NtResult<BOOL>;
+	using MxWord = NtResult<UINT16>;
+	using MxDword = NtResult<UINT32>;
+	using MxQword = NtResult<UINT64>;
+	using MxFloat = NtResult<FLOAT>;
+	using MxDouble = NtResult<DOUBLE>;
+
+	using MxPtr = NtResult<PTR_T>;
+	using MxModulePtr = NtResult<ModulePtr>;
 }

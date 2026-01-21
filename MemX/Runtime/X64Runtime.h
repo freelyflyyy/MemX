@@ -22,22 +22,24 @@ namespace MemX {
 
 		virtual NTSTATUS VirtualQueryExT(PTR_T lpAddress, PMEMORY_BASIC_INFORMATION64 lpBuffer) override;
 
-		virtual NTSTATUS FindModuleByLdrList32(LPWSTR lpModuleName, ModuleInfoPtr& pModule) override;
+		virtual NTSTATUS FindModuleByLdrList32(LPWSTR lpModuleName, ModulePtr& pModule) override;
 
-		virtual NTSTATUS FindModuleByLdrList64(LPWSTR lpModuleName, ModuleInfoPtr& pModule) override;
+		virtual NTSTATUS FindModuleByLdrList64(LPWSTR lpModuleName, ModulePtr& pModule) override;
 
-		virtual NTSTATUS GetAllModulesByLdrList32(std::vector<ModuleInfoPtr>* pModulesEntry) override;
+		virtual NTSTATUS GetAllModulesByLdrList32(std::vector<ModulePtr>* pModulesEntry) override;
 
-		virtual NTSTATUS GetAllModulesByLdrList64(std::vector<ModuleInfoPtr>* pModulesEntry) override;
+		virtual NTSTATUS GetAllModulesByLdrList64(std::vector<ModulePtr>* pModulesEntry) override;
 
-		virtual NTSTATUS GetAllModulesByPEHeaders32(std::vector<ModuleInfoPtr>* pModulesEntry) override;
+		virtual NTSTATUS GetAllModulesByPEHeaders32(std::vector<ModulePtr>* pModulesEntry) override;
 
-		virtual NTSTATUS GetAllModulesByPEHeaders64(std::vector<ModuleInfoPtr>* pModulesEntry) override;
+		virtual NTSTATUS GetAllModulesByPEHeaders64(std::vector<ModulePtr>* pModulesEntry) override;
 
-		virtual NTSTATUS GetAllModulesBySections32(std::vector<ModuleInfoPtr>* pModulesEntry) override;
+		virtual NTSTATUS GetAllModulesBySections32(std::vector<ModulePtr>* pModulesEntry) override;
 
-		virtual NTSTATUS GetAllModulesBySections64(std::vector<ModuleInfoPtr>* pModulesEntry) override;
+		virtual NTSTATUS GetAllModulesBySections64(std::vector<ModulePtr>* pModulesEntry) override;
 
-		virtual NTSTATUS GetAllModules32(std::vector<ModuleInfoPtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) override;
+		virtual NTSTATUS GetAllModules32(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) override;
+
+		virtual NTSTATUS GetAllModules64(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) override;
 	};
 }

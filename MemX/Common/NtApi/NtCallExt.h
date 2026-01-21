@@ -8,6 +8,10 @@
 
 namespace MemX {
 
+	union Reg64 {
+		DWORD64 v;
+		DWORD dw[ 2 ];
+	};
 
 	class NtCallExt {
 		public:

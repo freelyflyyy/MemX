@@ -1,39 +1,62 @@
-#include <iostream>
-#include <MemX/Process/Process.h>
-#include <MemX/Common/NtApi/NtApi.h>
-#include <MemX/Common/NtApi/NtCallExt.h>
+#include <windows.h>
+#pragma warning(disable: 28251)
 
-using namespace MemX;
 
-int main() {
-	Process process;
-	process.Catch(L"PlantsVsZombies.exe"); // Replace 1234 with a valid PID
-	MemX::NtResult<DWORD> readResult = process.Memory().Read<DWORD>(0x5F5625F8);
-	if ( readResult.success() ) {
-		std::cout << "Value at address 0x5EAE3430: " << std::dec << readResult.result() << std::dec << std::endl;
-		process.Memory().Write(0x5F5625F8, 9999);
-	} else {
-		std::cout << "Failed to read memory. NTSTATUS: " << std::hex
-			<< readResult.success() << std::dec << std::endl;
+LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	switch ( msg ) {
+	case WM_ERASEBKGND:
+
+		return 0;
+	case WM_PAINT:
+
+		return 0;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
 	}
+	return DefWindowProc(hwnd, msg, wParam, lParam);
+}
 
-	PEB32 peb32 = { 0 };
-	process.Core().getTargetPeb(&peb32);
-	std::cout << "PEB32 Ldr: 0x" << std::hex << peb32.Ldr << std::endl;
-	DWORD imageBase = process.Memory().Read<DWORD>(peb32.ImageBaseAddress).result(imageBase);
-	std::cout << "Image Base Address: 0x" << std::hex << imageBase << std::dec << std::endl;
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+	WNDCLASSEX wc = { 0 };
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc = MainWndProc;
+	wc.lpszMenuName = NULL;
+	wc.lpszClassName = L"MainWindowClass";
+	wc.hInstance = hInstance;
+	wc.hbrBackground = (HBRUSH) (COLOR_WINDOW + 1);
+	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 
+	if ( !RegisterClassEx(&wc) ) {
+		MessageBox(NULL, L"窗口注册失败！", L"错误", MB_ICONERROR);
+		return 0;
+	}
+	HWND hwnd = CreateWindowEx(
+		0,                       
+		L"MainWindowClass",       
+		L"这是我的第一个窗口",    
+		WS_OVERLAPPEDWINDOW,    
+		CW_USEDEFAULT, CW_USEDEFAULT,  
+		800, 600,     
+		NULL,        
+		NULL,                     
+		hInstance,         
+		NULL  
+	);
 
-	PEB64 peb64 = { 0 };
-	process.Core().getTargetPeb(&peb64);
-	std::cout << "PEB64 Ldr: 0x" << std::hex << peb64.Ldr << std::dec << std::endl;
-
-	ModuleInfoPtr mainModule = process.Module().GetMainModule();
-	std::cout << "Image Base Address: 0x" << std::hex << mainModule->baseAddr << std::dec << std::endl;
-
-	ModuleInfoPtr ntdllModule;
-	process.Core().getRuntime()->FindModuleByLdrList32(L"ntdll.dll", ntdllModule);
-
-	std::wcout << L"ntdll.dll Base Address: 0x" << std::hex << ntdllModule->baseAddr << std::dec << std::endl;
-	return 0;
+	if ( hwnd == NULL ) {
+		MessageBox(NULL, L"窗口创建失败！", L"错误", MB_ICONERROR);
+		return 0;
+	}
+	ShowWindow(hwnd, nCmdShow);
+	UpdateWindow(hwnd);
+	MSG msg;
+	while ( GetMessage(&msg, NULL, 0, 0) ) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	return (int) msg.wParam;
 }

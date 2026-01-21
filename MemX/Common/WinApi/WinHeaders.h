@@ -7,6 +7,7 @@
 #include <windows.h>
 #include <tlhelp32.h>
 #include <winternl.h>
+#include <wtypes.h>
 
 #pragma warning(push)
 #pragma warning(disable: 4005) 

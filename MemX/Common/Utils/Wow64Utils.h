@@ -1,5 +1,4 @@
 #pragma once
-
 #include "../WinApi/WinHeaders.h"
 #include "../Types/Type.h"
 

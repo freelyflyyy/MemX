@@ -47,10 +47,9 @@ namespace MemX {
 		 Process();
 		 ~Process(void);
 
-		
 		 NTSTATUS Catch(DWORD pid, DWORD access = DEFAULT_NORMAL_PROCESS_ACCESS);
 
-		 NTSTATUS Catch(const wchar_t* processName, DWORD access = DEFAULT_NORMAL_PROCESS_ACCESS);
+		 NTSTATUS Catch(wchar_t* processName, DWORD access = DEFAULT_NORMAL_PROCESS_ACCESS);
 
 		 NTSTATUS Catch(HANDLE proHandle);
 
