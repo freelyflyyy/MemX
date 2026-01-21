@@ -42,6 +42,10 @@ namespace MemX {
 
 		virtual NTSTATUS GetAllModules64(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) override;
 
+		virtual NTSTATUS GetProcessWindows(std::vector<WindowInfo>& windows) override;
+
+		virtual NTSTATUS GetWindowDetail(HWND hWnd, WindowInfo& info) override;
+
 	private:
 		DWORD64 _ntdll64 = 0;
 	};

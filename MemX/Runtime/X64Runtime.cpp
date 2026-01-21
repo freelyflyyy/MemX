@@ -247,4 +247,64 @@ namespace MemX {
 		}
 		return STATUS_UNSUCCESSFUL;
 	}
+
+	NTSTATUS X64Runtime::GetProcessWindows(std::vector<WindowInfo>& windows) {
+		windows.clear();
+		if ( !_hProcess || !_pid ) {
+			return STATUS_INVALID_PARAMETER;
+		}
+		struct EnumCtx {
+			DWORD TargetPID;
+			std::vector<WindowInfo>* List;
+			X64Runtime* Runtime;
+		} ctx = { this->_pid, &windows, this };
+
+		BOOL ret = EnumWindows([](HWND hWnd, LPARAM lParam) -> BOOL {
+				auto* pCtx = reinterpret_cast<EnumCtx*>(lParam);
+				DWORD wPid = 0;
+				GetWindowThreadProcessId(hWnd, &wPid);
+				if ( wPid == pCtx->TargetPID ) {
+					WindowInfo info;
+					if ( NT_SUCCESS(pCtx->Runtime->GetWindowDetail(hWnd, info)) ) {
+						pCtx->List->emplace_back(info);
+					}
+				}
+				return TRUE;
+			},
+			reinterpret_cast<LPARAM>(&ctx)
+		);
+		return ret ? STATUS_SUCCESS : GetLastNtStatus();
+	}
+
+	NTSTATUS X64Runtime::GetWindowDetail(HWND hWnd, WindowInfo& info) {
+		if ( !IsWindow(hWnd) ) return STATUS_INVALID_HANDLE;
+
+		info.hWindow = hWnd;
+		info.IsVisible = IsWindowVisible(hWnd);
+		// 获取标题
+		WCHAR buf[ 512 ] = { 0 };
+		GetWindowTextW(hWnd, buf, 512);
+		info.Title = buf;
+		// 获取类名
+		GetClassNameW(hWnd, buf, 512);
+		info.ClassName = buf;
+		// 获取窗口矩形
+		GetWindowRect(hWnd, &info.WindowRect);
+		info.Width = info.WindowRect.right - info.WindowRect.left;
+		info.Height = info.WindowRect.bottom - info.WindowRect.top;
+		// 获取客户区并转换坐标
+		GetClientRect(hWnd, &info.ClientRect);
+		info.ClientWidth = info.ClientRect.right - info.ClientRect.left;
+		info.ClientHeight = info.ClientRect.bottom - info.ClientRect.top;
+		// ClientRect 默认是相对坐标 (0,0)，我们需要转换成屏幕绝对坐标
+		POINT pt = { info.ClientRect.left, info.ClientRect.top };
+		ClientToScreen(hWnd, &pt);
+		info.ClientRect.left = pt.x;
+		info.ClientRect.top = pt.y;
+		info.ClientRect.right += pt.x;
+		info.ClientRect.bottom += pt.y;
+
+		return STATUS_SUCCESS;
+	}
+
 }

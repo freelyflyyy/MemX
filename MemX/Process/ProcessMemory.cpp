@@ -4,7 +4,7 @@
 
 namespace MemX {
 
-	ProcessMemory::ProcessMemory(Process* process) : _process(process), _core(process->Core()) {
+	ProcessMemory::ProcessMemory(Process& process) : _process(process), _core(process.Core()) {
 	}
 
 	ProcessMemory::~ProcessMemory() {

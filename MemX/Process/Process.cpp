@@ -3,8 +3,9 @@
 namespace MemX {
     Process::Process() 
         :_core(),
-        _memory(this),
-        _module(*this) {
+        _memory(*this),
+        _module(*this),
+        _window(*this){
     }
     Process::~Process(void) {
     }

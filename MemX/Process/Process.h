@@ -2,6 +2,7 @@
 #include "ProcessMemory.h"
 #include "ProcessCore.h"
 #include "ProcessModule.h"
+#include "ProcessWindow.h"
 #include "../Common/WinApi/WinHeaders.h"
 #include "../Common/NtApi/NtResult.h"
 
@@ -10,18 +11,6 @@
 
 
 namespace MemX {
-
-	//<summary>
-	// Contains information about a process.
-	//</summary>
-	struct ProcessInfo {
-		uint32_t pid = 0;
-		std::wstring imageName;
-
-		bool operator < (const ProcessInfo& other) const {
-			return this->pid < other.pid;
-		}
-	};
 
 	#define DEFAULT_NORMAL_PROCESS_ACCESS \
 									 PROCESS_VM_READ		   |\
@@ -60,6 +49,7 @@ namespace MemX {
 		 ProcessMemory& Memory() { return _memory; }
 		 ProcessCore& Core() { return _core; }
 		 ProcessModule& Module() { return _module; }
+		 ProcessWindow& Window() { return _window; }
 
 		private:
 		Process(const Process&) = delete;
@@ -71,5 +61,6 @@ namespace MemX {
 		ProcessCore _core;
 		ProcessMemory _memory;
 		ProcessModule _module;
+		ProcessWindow _window;
 	};
 }

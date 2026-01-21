@@ -23,12 +23,14 @@ source_group(Inc FILES ${Inc})
 set(SOURCE_PROCESS "Process/Process.h"
 					"Process/ProcessMemory.h"
 					"Process/ProcessCore.h"
-					"Process/ProcessModule.h")
+					"Process/ProcessModule.h"
+					"Process/ProcessWindow.h")
 
 set(HEADER_PROCESS "Process/Process.cpp"
 					"Process/ProcessMemory.cpp"
 					"Process/ProcessCore.cpp"
-					"Process/ProcessModule.cpp")
+					"Process/ProcessModule.cpp"
+					"Process/ProcessWindow.cpp")
 
 file(GLOB Process ${SOURCE_PROCESS} ${HEADER_PROCESS})
 source_group(Process FILES ${Process})

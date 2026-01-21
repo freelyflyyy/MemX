@@ -11,7 +11,7 @@ namespace MemX {
 
 	class ProcessMemory {
 		public:
-		 ProcessMemory(class Process* process);
+		 ProcessMemory(class Process& process);
 		 ~ProcessMemory();
 
 		 NTSTATUS Read(PTR_T baseAddr, PVOID pResult, size_t dwSize, bool skipUncommited);
@@ -53,7 +53,7 @@ namespace MemX {
 		ProcessMemory& operator=(const ProcessMemory&) = delete;
 
 		private:
-		class Process* _process;
+		class Process& _process;
 		class ProcessCore& _core;
 	};
 }

@@ -266,4 +266,63 @@ namespace MemX {
 		}
 		return STATUS_UNSUCCESSFUL;
 	}
+
+	NTSTATUS Wow64Runtime::GetProcessWindows(std::vector<WindowInfo>& windows) {
+		windows.clear();
+		DWORD pid = GetProcessId(_hProcess);
+		if ( pid == 0 ) return STATUS_INVALID_PARAMETER;
+
+		struct EnumCtx {
+			DWORD TargetPID;
+			std::vector<WindowInfo>* List;
+			Wow64Runtime* Runtime;
+		} ctx = { this->_pid, &windows, this };
+
+		BOOL ret = EnumWindows([] (HWND hWnd, LPARAM lParam) -> BOOL {
+			auto* c = reinterpret_cast<EnumCtx*>(lParam);
+
+			DWORD wPid = 0;
+			GetWindowThreadProcessId(hWnd, &wPid);
+
+			if ( wPid == c->TargetPID ) {
+				WindowInfo info = { 0 };
+				if ( NT_SUCCESS(c->Runtime->GetWindowDetail(hWnd, info)) ) {
+					c->List->push_back(info);
+				}
+			}
+			return TRUE;
+		}, (LPARAM) &ctx);
+
+		return ret ? STATUS_SUCCESS : GetLastNtStatus();
+	}
+
+	NTSTATUS Wow64Runtime::GetWindowDetail(HWND hWnd, WindowInfo& info) {
+		if ( !IsWindow(hWnd) ) return STATUS_INVALID_HANDLE;
+
+		info.hWindow = hWnd;
+		info.IsVisible = IsWindowVisible(hWnd);
+		// 获取标题
+		WCHAR buf[ 512 ] = { 0 };
+		GetWindowTextW(hWnd, buf, 512);
+		info.Title = buf;
+		// 获取类名
+		GetClassNameW(hWnd, buf, 512);
+		info.ClassName = buf;
+		// 获取窗口矩形 (屏幕坐标)
+		GetWindowRect(hWnd, &info.WindowRect);
+		info.Width = info.WindowRect.right - info.WindowRect.left;
+		info.Height = info.WindowRect.bottom - info.WindowRect.top;
+		// 获取客户区矩形
+		GetClientRect(hWnd, &info.ClientRect);
+		info.ClientWidth = info.ClientRect.right - info.ClientRect.left;
+		info.ClientHeight = info.ClientRect.bottom - info.ClientRect.top;
+		// 将客户区坐标转换为屏幕坐标
+		POINT pt = { info.ClientRect.left, info.ClientRect.top };
+		ClientToScreen(hWnd, &pt);
+		info.ClientRect.left = pt.x;
+		info.ClientRect.top = pt.y;
+		info.ClientRect.right += pt.x;
+		info.ClientRect.bottom += pt.y;
+		return STATUS_SUCCESS;
+	}
 }

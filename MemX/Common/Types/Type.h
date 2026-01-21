@@ -43,6 +43,21 @@ namespace MemX {
 		SCAN_PEHEADER
 	};
 
+	struct WindowInfo {
+		HWND hWindow;               // 窗口句柄
+		std::wstring Title;         // 窗口标题
+		std::wstring ClassName;     // 窗口类名
+		RECT WindowRect;            // 窗口矩形 (屏幕坐标)
+		RECT ClientRect;            // 客户区矩形 (屏幕坐标)
+		int Width;                  // 窗口总宽度
+		int Height;                 // 窗口总高度
+		int ClientWidth;            // 客户区宽度
+		int ClientHeight;           // 客户区高度
+		BOOL IsVisible;             // 是否可见
+
+		bool IsValid() const { return hWindow != NULL; }
+	};
+
 
 	//Basic Types with NtResult wrapper
 	using MxByte = NtResult<BYTE>;
