@@ -20,15 +20,17 @@ set(SOURCE_INCLUDE "Common/NtApi/NtCallExt.cpp")
 file(GLOB Inc ${HEADER_INCLUDE} ${SOURCE_INCLUDE})
 source_group(Inc FILES ${Inc})
 ############################################################
-set(SOURCE_PROCESS "Process/Process.h"
-					"Process/ProcessMemory.h"
-					"Process/ProcessCore.h"
-					"Process/ProcessModule.h")
+set(SOURCE_PROCESS "Process/XContext.h"
+					"Process/XMemory.h"
+					"Process/XCore.h"
+					"Process/XModule.h"
+					"Process/XWindow.h")
 
-set(HEADER_PROCESS "Process/Process.cpp"
-					"Process/ProcessMemory.cpp"
-					"Process/ProcessCore.cpp"
-					"Process/ProcessModule.cpp")
+set(HEADER_PROCESS "Process/XContext.cpp"
+					"Process/XMemory.cpp"
+					"Process/XCore.cpp" 
+					"Process/XModule.cpp"
+					"Process/XWindow.cpp")
 
 file(GLOB Process ${SOURCE_PROCESS} ${HEADER_PROCESS})
 source_group(Process FILES ${Process})

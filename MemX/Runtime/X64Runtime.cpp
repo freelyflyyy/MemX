@@ -91,7 +91,7 @@ namespace MemX {
 			return status;
 		}
 		for ( const auto& module : pModulesEntry ) {
-			if ( module->FullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
+			if ( module->FullName == ToLower(lpModuleName) ) {
 				pModule = module;
 				return STATUS_SUCCESS;
 			}
@@ -106,7 +106,7 @@ namespace MemX {
 			return status;
 		}
 		for ( const auto& module : pModulesEntry ) {
-			if ( module->FullName.find(ToLower(lpModuleName)) != std::wstring::npos ) {
+			if ( module->FullName == ToLower(lpModuleName) ) {
 				pModule = module;
 				return STATUS_SUCCESS;
 			}
@@ -247,4 +247,117 @@ namespace MemX {
 		}
 		return STATUS_UNSUCCESSFUL;
 	}
+
+	NTSTATUS X64Runtime::GetAllWindow(std::vector<HWND>& handles) {
+		handles.clear();
+		if ( !_hProcess || !_pid ) {
+			return STATUS_INVALID_PARAMETER;
+		}
+
+		struct EnumCtx {
+			DWORD TargetPID;
+			std::vector<HWND>* List;
+		} ctx = { this->_pid, &handles };
+
+		EnumWindows([] (HWND hWnd, LPARAM lParam) -> BOOL {
+			auto* c = reinterpret_cast<EnumCtx*>(lParam);
+
+			DWORD wPid = 0;
+			GetWindowThreadProcessId(hWnd, &wPid);
+
+			if ( wPid == c->TargetPID ) {
+				c->List->push_back(hWnd);
+			}
+			return TRUE;
+		}, (LPARAM) &ctx);
+
+		if ( ctx.List->empty() ) {
+			return STATUS_NOT_FOUND;
+		}
+
+		return STATUS_SUCCESS;
+	}
+
+	NTSTATUS X64Runtime::GetWindow(LPCWSTR lpClassName, LPCWSTR lpWindowName, HWND& handle) {
+		if ( lpClassName == nullptr && lpWindowName == nullptr ) {
+			return STATUS_INVALID_PARAMETER;
+		}
+
+		struct EnumCtx {
+			DWORD TargetPID;
+			LPCWSTR ClassName;
+			LPCWSTR WindowName;
+			HWND FoundHandle;
+		} ctx = { this->_pid, lpClassName, lpWindowName, NULL };
+
+		EnumWindows([] (HWND hwnd, LPARAM lParam) -> BOOL {
+			auto* c = reinterpret_cast<EnumCtx*>(lParam);
+
+			//Check the window's HWMD matches the target PID
+			DWORD wPid = 0;
+			GetWindowThreadProcessId(hwnd, &wPid);
+			if ( wPid != c->TargetPID ) {
+				return FALSE;
+			}
+
+			//Check the window's class name matches the target class name (if provided)
+			if ( c->ClassName != NULL ) {
+				WCHAR className[ 256 ] = { 0 };
+				GetClassNameW(hwnd, className, 256);
+				if ( wcscmp(c->ClassName, className) != 0 ) {
+					return TRUE;
+				}
+			}
+
+			//Check the window's title matches the target window name (if provided)
+			if ( c->WindowName != NULL ) {
+				WCHAR windowName[ 256 ] = { 0 };
+				GetWindowTextW(hwnd, windowName, 256);
+				if ( wcscmp(c->WindowName, windowName) != 0 ) {
+					return TRUE;
+				}
+			}
+
+			c->FoundHandle = hwnd;
+			return FALSE; // Found the window, stop enumeration
+		}, (LPARAM) &ctx);
+
+		if ( ctx.FoundHandle != NULL ) {
+			handle = ctx.FoundHandle;
+			return STATUS_SUCCESS;
+		}
+		return STATUS_NOT_FOUND;
+	}
+
+	NTSTATUS X64Runtime::GetWindowInfo(HWND hWnd, WindowInfo& info) {
+		if ( !IsWindow(hWnd) ) return STATUS_INVALID_HANDLE;
+
+		info.hWindow = hWnd;
+		info.IsVisible = IsWindowVisible(hWnd);
+		// 获取标题
+		WCHAR buf[ 512 ] = { 0 };
+		GetWindowTextW(hWnd, buf, 512);
+		info.Title = buf;
+		// 获取类名
+		GetClassNameW(hWnd, buf, 512);
+		info.ClassName = buf;
+		// 获取窗口矩形
+		GetWindowRect(hWnd, &info.WindowRect);
+		info.Width = info.WindowRect.right - info.WindowRect.left;
+		info.Height = info.WindowRect.bottom - info.WindowRect.top;
+		// 获取客户区并转换坐标
+		GetClientRect(hWnd, &info.ClientRect);
+		info.ClientWidth = info.ClientRect.right - info.ClientRect.left;
+		info.ClientHeight = info.ClientRect.bottom - info.ClientRect.top;
+		// ClientRect 默认是相对坐标 (0,0)，我们需要转换成屏幕绝对坐标
+		POINT pt = { info.ClientRect.left, info.ClientRect.top };
+		ClientToScreen(hWnd, &pt);
+		info.ClientRect.left = pt.x;
+		info.ClientRect.top = pt.y;
+		info.ClientRect.right += pt.x;
+		info.ClientRect.bottom += pt.y;
+
+		return STATUS_SUCCESS;
+	}
+
 }

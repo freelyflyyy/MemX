@@ -41,5 +41,11 @@ namespace MemX {
 		virtual NTSTATUS GetAllModules32(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) override;
 
 		virtual NTSTATUS GetAllModules64(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) override;
+
+		virtual NTSTATUS GetAllWindow(std::vector<HWND>& handles) override;
+
+		virtual NTSTATUS GetWindow(LPCWSTR lpClassName, LPCWSTR lpWindowName, HWND& handle) override;
+
+		virtual NTSTATUS GetWindowInfo(HWND hWnd, WindowInfo& info) override;
 	};
 }

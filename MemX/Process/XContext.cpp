@@ -1,4 +1,4 @@
-#include "ProcessCore.h"
+#include "XContext.h"
 #include "../Common/NtApi/NtApi.h"
 #include "../Common/WinApi/ArchitectureApi.h"
 #include "../Runtime/X64Runtime.h"
@@ -6,15 +6,12 @@
 #include <VersionHelpers.h>
 
 namespace MemX {
-	ProcessCore::ProcessCore() : _runtime(nullptr) {
+	XContext::XContext() : _runtime(nullptr) {}
+	XContext::~XContext() { Close(); }
 
-	}
+	NTSTATUS XContext::Open(DWORD pid, DWORD access) {
+		Close();
 
-	ProcessCore::~ProcessCore() {
-
-	}
-
-	NTSTATUS ProcessCore::Open(DWORD pid, DWORD access) {
 		if ( pid == GetCurrentProcessId() ) {
 			_hProcess = GetCurrentProcess();
 			_active = TRUE;
@@ -22,22 +19,20 @@ namespace MemX {
 			_hProcess = OpenProcess(access, FALSE, pid);
 		}
 
-		//Some Windows 10 versions require PROCESS_ALL_ACCESS for current process handle
 		if ( IsWindows10OrGreater() && pid == GetCurrentProcessId() ) {
 			_hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
 		}
-
 
 		if ( _hProcess ) {
 			_pid = pid;
 			_active = TRUE;
 			return Init();
 		}
-
 		return GetLastNtStatus();
 	}
 
-	NTSTATUS ProcessCore::Open(HANDLE proHandle) {
+	NTSTATUS XContext::Open(HANDLE proHandle) {
+		Close();
 		_hProcess = proHandle;
 		_pid = GetProcessId(_hProcess);
 
@@ -47,15 +42,14 @@ namespace MemX {
 		if ( _hProcess ) {
 			_active = TRUE;
 		}
-
 		return Init();
 	}
 
-	NTSTATUS ProcessCore::Init() {
+	NTSTATUS XContext::Init() {
 		ArchitectureApi texApi(_hProcess);
 		_arch = texApi.GetArchitechure();
-		BOOL wowSrc = _arch.sourceWow64;
-		if ( !wowSrc ) {
+
+		if ( !_arch.sourceWow64 ) {
 			_runtime = std::make_unique<X64Runtime>(_hProcess);
 		} else {
 			_runtime = std::make_unique<Wow64Runtime>(_hProcess);
@@ -63,9 +57,13 @@ namespace MemX {
 		return STATUS_SUCCESS;
 	}
 
-	void ProcessCore::Close() {
-		CloseHandle(_hProcess);
+	void XContext::Close() {
+		if ( _hProcess && _hProcess != GetCurrentProcess() ) {
+			CloseHandle(_hProcess);
+		}
+		_hProcess = nullptr;
 		_runtime.reset();
 		_pid = 0;
+		_active = FALSE;
 	}
 }

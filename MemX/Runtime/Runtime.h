@@ -10,9 +10,10 @@
 namespace MemX {
 	class Runtime {
 		public:
-		 Runtime(HANDLE hProcess) : _hProcess(hProcess) {
+		Runtime(HANDLE hProcess) : _hProcess(hProcess) {
+			_pid = GetProcessId(hProcess);
 		};
-		 ~Runtime() {};
+		~Runtime() {};
 
 		PTR_T maxAddr32() {
 			return 0x7FFFFFFF;
@@ -75,8 +76,15 @@ namespace MemX {
 		virtual NTSTATUS GetAllModules32(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) = 0;
 
 		virtual NTSTATUS GetAllModules64(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) = 0;
+
+		virtual NTSTATUS GetAllWindow(std::vector<HWND>& handles) = 0; 
+
+		virtual NTSTATUS GetWindow(LPCWSTR lpClassName, LPCWSTR lpWindowName, HWND& handle) = 0;
+
+		virtual NTSTATUS GetWindowInfo(HWND hWnd, WindowInfo& info) = 0;
 		protected:
-		HANDLE _hProcess;
+		HANDLE _hProcess = 0;
+		DWORD _pid = 0;
 	};
 }
 

@@ -1,62 +1,62 @@
-#include <windows.h>
-#pragma warning(disable: 28251)
+#include <iostream>
+// 1. 引入必要的头文件 (不再需要 Process.h)
+#include <MemX/Process/XContext.h>
+#include <MemX/Process/XMemory.h> 
+#include <MemX/Common/NtApi/NtResult.h> // 注意路径修正
 
+int main() {
+    // 2. [核心] 初始化上下文 (替代 MemX::Process)
+    MemX::XContext ctx;
+    DWORD targetPid = 0x5E78; // 替换为实际 PID
 
-LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch ( msg ) {
-	case WM_ERASEBKGND:
+    // 3. [连接] 使用 Open 替代 Catch
+    NTSTATUS status = ctx.Open(targetPid, PROCESS_ALL_ACCESS);
 
-		return 0;
-	case WM_PAINT:
+    if ( NT_SUCCESS(status) ) {
+        std::wcout << L"Successfully attached to process with PID: " << targetPid << std::endl;
 
-		return 0;
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		return 0;
-	}
-	return DefWindowProc(hwnd, msg, wParam, lParam);
-}
+        // 4. [状态] 直接检查 Context (替代 process.Core().isActive())
+        if ( ctx.IsActive() ) {
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-	WNDCLASSEX wc = { 0 };
-	wc.cbSize = sizeof(WNDCLASSEX);
-	wc.style = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = MainWndProc;
-	wc.lpszMenuName = NULL;
-	wc.lpszClassName = L"MainWindowClass";
-	wc.hInstance = hInstance;
-	wc.hbrBackground = (HBRUSH) (COLOR_WINDOW + 1);
-	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
-	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+            // 5. [组件] 显式创建 Memory 组件并注入 Context (这是最大的不同点)
+            MemX::XMemory memory(ctx);
 
-	if ( !RegisterClassEx(&wc) ) {
-		MessageBox(NULL, L"窗口注册失败！", L"错误", MB_ICONERROR);
-		return 0;
-	}
-	HWND hwnd = CreateWindowEx(
-		0,                       
-		L"MainWindowClass",       
-		L"这是我的第一个窗口",    
-		WS_OVERLAPPEDWINDOW,    
-		CW_USEDEFAULT, CW_USEDEFAULT,  
-		800, 600,     
-		NULL,        
-		NULL,                     
-		hInstance,         
-		NULL  
-	);
+            // 这里的 PTR_T 是 MemX 定义的 (UINT64)
+            MemX::PTR_T memoryAddress = 0x5EBF6DD8;
 
-	if ( hwnd == NULL ) {
-		MessageBox(NULL, L"窗口创建失败！", L"错误", MB_ICONERROR);
-		return 0;
-	}
-	ShowWindow(hwnd, nCmdShow);
-	UpdateWindow(hwnd);
-	MSG msg;
-	while ( GetMessage(&msg, NULL, 0, 0) ) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-	return (int) msg.wParam;
+            // Read a DWORD from memory
+            // 调用 memory 组件的方法
+            auto readResult = memory.Read<DWORD>(memoryAddress);
+
+            if ( readResult.success() ) {
+                std::cout << "Read value at " << std::hex << memoryAddress << ": " << std::dec << readResult.result() << std::endl;
+            } else {
+                std::wcerr << L"Failed to read memory." << std::endl;
+            }
+
+            // Write a new DWORD value to memory
+            DWORD newValue = 123456789;
+            NTSTATUS writeStatus = memory.Write<DWORD>(memoryAddress, newValue);
+
+            if ( NT_SUCCESS(writeStatus) ) {
+                std::cout << "Successfully wrote " << newValue << " to " << std::hex << memoryAddress << std::endl;
+            } else {
+                std::wcerr << L"Failed to write memory. NTSTATUS: " << std::hex << writeStatus << std::endl;
+            }
+
+            // Verify the write by reading again
+            readResult = memory.Read<DWORD>(memoryAddress);
+            if ( readResult.success() ) {
+                std::cout << "Verified new value: " << std::dec << readResult.result() << std::endl;
+            }
+        } else {
+            std::wcerr << L"Process is not active." << std::endl;
+        }
+
+        // 6. [清理] 使用 Close 替代 Drop (或者让对象析构自动处理)
+        ctx.Close();
+    } else {
+        std::wcerr << L"Failed to attach to process. NTSTATUS: " << std::hex << status << std::endl;
+    }
+    return 0;
 }
