@@ -11,11 +11,12 @@ set(HEADER_INCLUDE "Common/WinApi/WinHeaders.h"
 					"Common/WinApi/ArchitectureApi.h"
 					"Common/NtApi/NtCallExt.h"
 					"Common/NtApi/NtApi.h"
-					"Common/NtApi/NtResult.h"
 					"Common/Utils/Utils.h"
 					"Common/Utils/Wow64Utils.h"
 					"Common/Utils/StringUtils.h"
-					"Common/Types/Type.h")
+					"Common/Types/XTypes.h"
+					"Common/Types/XStatus.h"
+					"Common/Types/XResult.h")
 set(SOURCE_INCLUDE "Common/NtApi/NtCallExt.cpp")
 file(GLOB Inc ${HEADER_INCLUDE} ${SOURCE_INCLUDE})
 source_group(Inc FILES ${Inc})

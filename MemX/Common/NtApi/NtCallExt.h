@@ -106,7 +106,7 @@ namespace MemX {
 			if ( !funcAddr ) {
 				return ERROR_INVALID_ADDRESS;
 			}
-			DWORD64 result = X64CallVa(
+			NTSTATUS result = (NTSTATUS)X64CallVa(
 				(DWORD64) funcAddr,
 				(int) sizeof...(Args),
 				(DWORD64) std::forward<Args>(args)...

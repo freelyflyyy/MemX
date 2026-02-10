@@ -1,13 +1,13 @@
 #pragma once
 
 #include "../WinApi/WinHeaders.h"
-#include "../NtApi/NtResult.h"
+#include "XResult.h"
 #include <string>
 #include <memory>
 
 namespace MemX {
 	template <typename T>
-	using result = NtResult<T>;
+	using result = XResult<T>;
 
 	using PTR_T = UINT64;
 
@@ -35,8 +35,6 @@ namespace MemX {
 		}
 	};
 
-	using ModulePtr = std::shared_ptr<const Module>;
-
 	enum MODULE_SEARCH_MODE {
 		SCAN_LDR,
 		SCAN_SECTION,
@@ -59,15 +57,14 @@ namespace MemX {
 	};
 
 
-	//Basic Types with NtResult wrapper
-	using MxByte = NtResult<BYTE>;
-	using MxBool = NtResult<BOOL>;
-	using MxWord = NtResult<UINT16>;
-	using MxDword = NtResult<UINT32>;
-	using MxQword = NtResult<UINT64>;
-	using MxFloat = NtResult<FLOAT>;
-	using MxDouble = NtResult<DOUBLE>;
+	//Basic Types with XResult wrapper
+	using XByte = XResult<BYTE>;
+	using XWord = XResult<UINT16>;
+	using XDword = XResult<UINT32>;
+	using XQword = XResult<UINT64>;
+	using XFloat = XResult<FLOAT>;
+	using XDouble = XResult<DOUBLE>;
 
-	using MxPtr = NtResult<PTR_T>;
-	using MxModulePtr = NtResult<ModulePtr>;
+	using XPtr = XResult<PTR_T>;
+	using XModule = XResult<Module>;
 }

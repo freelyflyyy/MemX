@@ -1,6 +1,7 @@
 #pragma once
 #include "../Common/WinApi/WinHeaders.h"
 #include "../Runtime/Runtime.h"
+#include "../Common/Types/XStatus.h"
 #include <memory>
 
 namespace MemX {
@@ -9,9 +10,10 @@ namespace MemX {
 		XContext();
 		~XContext();
 
-		NTSTATUS Open(DWORD pid, DWORD access);
-		NTSTATUS Open(HANDLE proHandle);
-		void Close();
+		XStatus Attach(DWORD pid, DWORD access);
+		XStatus Attach(std::wstring processName, DWORD access);
+		XStatus Attach(HANDLE proHandle);
+		VOID Close();
 
 		BOOL IsWow64() const { return _arch.targetWow64; }
 		BOOL IsActive() const { return _active; }
@@ -21,7 +23,7 @@ namespace MemX {
 		Runtime* GetRuntime() const { return _runtime.get(); }
 
 		private:
-		NTSTATUS Init();
+		XStatus Init();
 
 		private:
 		HANDLE _hProcess = nullptr;

@@ -5,13 +5,12 @@ namespace MemX {
 	XMemory::XMemory(XContext& context) : _context(context) {}
 	XMemory::~XMemory() {}
 
-	NTSTATUS XMemory::Read(PTR_T baseAddr, PVOID pResult, size_t dwSize, bool skipUncommited) {
+	XStatus XMemory::Read(PTR_T baseAddr, PVOID pResult, size_t dwSize, bool skipUncommited) {
 		if ( !_context.IsActive() ) return STATUS_UNSUCCESSFUL;
 		DWORD64 dwRead = 0;
 		if ( !baseAddr ) return STATUS_INVALID_ADDRESS;
 
 		if ( !skipUncommited ) {
-			// 直接通过 Context 获取 Runtime
 			NTSTATUS status = _context.GetRuntime()->ReadProcessMemoryT(baseAddr, pResult, dwSize, &dwRead);
 			if ( NT_SUCCESS(status) && dwRead != dwSize ) return STATUS_PARTIAL_COPY;
 			return status;
@@ -39,7 +38,7 @@ namespace MemX {
 		return STATUS_SUCCESS;
 	}
 
-	NTSTATUS XMemory::Read(const std::vector<PTR_T>& addrList, PVOID pResult, size_t dwSize, bool skipUncommited) {
+	XStatus XMemory::Read(const std::vector<PTR_T>& addrList, PVOID pResult, size_t dwSize, bool skipUncommited) {
 		if ( addrList.empty() ) return STATUS_INVALID_PARAMETER;
 		if ( addrList.size() == 1 ) return Read(addrList[ 0 ], pResult, dwSize, skipUncommited);
 		PTR_T currentAddr = addrList[ 0 ];
@@ -52,13 +51,13 @@ namespace MemX {
 		return Read(currentAddr, pResult, dwSize, skipUncommited);
 	}
 
-	NTSTATUS XMemory::Write(PTR_T baseAddr, LPCVOID pData, size_t dwSize) {
+	XStatus XMemory::Write(PTR_T baseAddr, LPCVOID pData, size_t dwSize) {
 		if ( !_context.IsActive() ) return STATUS_UNSUCCESSFUL;
 		if ( !baseAddr ) return STATUS_INVALID_ADDRESS;
 		return _context.GetRuntime()->WriteProcessMemoryT(baseAddr, pData, dwSize);
 	}
 
-	NTSTATUS XMemory::Write(const std::vector<PTR_T>& addrList, LPCVOID pData, size_t dwSize) {
+	XStatus XMemory::Write(const std::vector<PTR_T>& addrList, LPCVOID pData, size_t dwSize) {
 		if ( !_context.IsActive() ) return STATUS_UNSUCCESSFUL;
 		if ( addrList.empty() ) return STATUS_INVALID_PARAMETER;
 		if ( addrList.size() == 1 ) return Write(addrList[ 0 ], pData, dwSize);
