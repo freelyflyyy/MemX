@@ -1,135 +1,146 @@
-# MemX
+﻿# MemX - Advanced Windows Processes and Memory Operations Library
 
-MemX is mainly used to interact with and manipulate processes on Windows. 
-At present, it provides the function of attaching to the running process, reading and writing memory
+## 📖 Project Introduction
+**MemX** is a statically linked library written in modern C++ (C++17), specifically designed for advanced Windows process control, memory read/write operations, and low-level system interactions. Unlike ordinary WinAPI wrapper libraries, MemX dives deep into the operating system's lowest levels by directly invoking undocumented **NTAPI (System Calls)**, providing more powerful and stealthy operational capabilities.
 
-## How to Use MemX
+**🌟 Core Highlights**:
+* **Wow64 Bypass (Heaven's Gate Technology)**: Normally, a 32-bit program cannot directly interact with a 64-bit target program. MemX breaks this limitation, allowing 32-bit applications to safely and seamlessly execute native 64-bit system calls, bypassing standard WoW64 subsystem interception.
+* **Multi-level Pointer Addressing (Pointer Chains)**: In reverse engineering, data is often hidden behind multiple layers of pointers. This library has built-in pointer chain resolution capabilities. By simply providing an array of offsets, you can complete complex deep dereferencing with a single line of code.
+* **Modern C++ Architecture (Elegant Error Handling)**: Fully embraces C++17. It discards traditional `try-catch` exception handling and cumbersome `BOOL` return values in favor of custom `XResult<T>` and `XStatus`. This makes error handling not only extremely safe but also makes the code highly intuitive to read.
+* **Stealthy Module Enumeration (PEB/LDR Parsing)**: Abandons the `CreateToolhelp32Snapshot` function, which is easily monitored by antivirus software or anti-cheat systems. Instead, it directly reads the "Process Environment Block (PEB)" and "Loader Data (Ldr)" in the target process's memory to achieve highly stealthy module list retrieval.
 
-Here's a basic example demonstrating how to attach to a process, read a value from its memory, and then write a new value.
+---
+
+## 🛠️ Build and Installation Requirements
+
+To compile and use this library in your project, you must meet the following environmental requirements:
+
+* **Build Tool**: CMake (Minimum version 3.10 required)
+* **Compiler**: Must support the **C++17** standard (Highly recommend using MSVC / Visual Studio 2019 or later)
+* **Operating System**: Windows 10 or higher (The code includes specific optimizations for Windows 10 pseudo-handle privilege escalation)
+
+---
+
+## 📚 Detailed Usage Guide (Step-by-Step Tutorial)
+
+Below, we will teach you how to use MemX step by step. Each step comes with detailed explanations to ensure you not only know how to do it but also understand why.
+
+### Step 1: Attach to the Target Process (`XContext`)
+The prerequisite for any operation is establishing a connection with the target process. `XContext` is the "brain" and "passport" of the entire library. You need to create a context object first and then "attach" it to the program you want to manipulate.
 
 ```cpp
+#include "MemX/Process/XContext.h"
 #include <iostream>
-#include <MemX/Process/Process.h>
-#include <MemX/Common/WinApi/NtResult.h>
+
+using namespace MemX;
 
 int main() {
-    MemX::Process process;
-    DWORD targetPid = 0x1234; // Replace with the actual PID of your target process
+    // 1. Create the context object. It will manage the process handle and architecture information.
+    XContext context;
+
+    // 2. Attach to the target process.
+    // Here we attach using the process name (e.g., TargetProcess.exe).
+    // PROCESS_ALL_ACCESS means we request the highest control privileges for this process from the system.
+    XStatus status = context.Attach(L"TargetProcess.exe", PROCESS_ALL_ACCESS);
     
-    // Attach to the process by PID
-    NTSTATUS status = process.Catch(targetPid);
-
-    if (NT_SUCCESS(status)) {
-        std::wcout << L"Successfully attached to process with PID: " << targetPid << std::endl;
-
-        // Check if the process is active
-        if (process.Core().isActive()) {
-            // Example memory address (replace with an actual address from your target process)
-            MemX::ptr_t memoryAddress = 0x600B4130; 
-
-            // Read a DWORD from memory
-            MemX::NtResult<DWORD> readResult = process.Memory().Read<DWORD>(memoryAddress);
-            if (readResult.success()) {
-                std::cout << "Read value at " << std::hex << memoryAddress << ": " << std::dec << readResult.result() << std::endl;
-            } else {
-                std::wcerr << L"Failed to read memory. NTSTATUS: " << std::hex << readResult.status() << std::endl;
-            }
-
-            // Write a new DWORD value to memory
-            DWORD newValue = 123456789;
-            NTSTATUS writeStatus = process.Memory().Write<DWORD>(memoryAddress, newValue);
-            if (NT_SUCCESS(writeStatus)) {
-                std::cout << "Successfully wrote " << newValue << " to " << std::hex << memoryAddress << std::endl;
-            } else {
-                std::wcerr << L"Failed to write memory. NTSTATUS: " << std::hex << writeStatus << std::endl;
-            }
-
-            // Verify the write by reading again
-            readResult = process.Memory().Read<DWORD>(memoryAddress);
-            if (readResult.success()) {
-                std::cout << "Verified new value: " << std::dec << readResult.result() << std::endl;
-            }
-        } else {
-            std::wcerr << L"Process is not active." << std::endl;
-        }
-
-        // Don't forget to drop the process handle when done
-        process.Drop();
-    } else {
-        std::wcerr << L"Failed to attach to process. NTSTATUS: " << std::hex << status << std::endl;
+    // 3. Check if the attachment was successful.
+    // XStatus overloads the bool operator, so you can use 'if' directly for evaluation.
+    if (!status) {
+        // If it fails, status.Message() will tell you the specific system error reason.
+        std::wcout << L"Failed to attach. Reason: " << status.Message() << std::endl;
+        return -1;
     }
+
+    // Once successfully attached, you can retrieve detailed information about the target process.
+    std::wcout << L"Successfully attached! Target PID: " << context.GetPid() << std::endl;
+    std::wcout << L"Is the target process 32-bit (Wow64)? " << (context.IsWow64() ? L"Yes" : L"No") << std::endl;
 
     return 0;
 }
 ```
 
-### Attaching to a process
-
-You can attach to a process in several ways:
-
-*   **By Process ID (PID):**
-    ```cpp
-    DWORD pid = GetCurrentProcessId(); // Example: get current process PID
-    NTSTATUS status = process.Catch(pid);
-    ```
-*   **By Process Name:**
-    ```cpp
-    const wchar_t* processName = L"notepad.exe"; 
-    NTSTATUS status = process.Catch(processName);
-    ```
-*   **By Process Handle:**
-    ```cpp
-    HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, targetPid);
-    if (hProcess) {
-        NTSTATUS status = process.Catch(hProcess);
-        CloseHandle(hProcess); // MemX takes ownership/duplicates the handle, so you can close yours
-    }
-    ```
-
-### Memory Reading and Writing
-
-#### Basic Read/Write
+### Step 2: Read and Write Memory Safely (XMemory)
+After attaching to the process, you use the XMemory class to read or modify data. MemX uses XResult<T> to wrap both the execution status and the actual data. This guarantees that your program will never crash due to dereferencing invalid memory.
 
 ```cpp
-// Read a 4-byte integer (DWORD)
-MemX::ptr_t address = 0x12345678;
-MemX::NtResult<DWORD> value = process.Memory().Read<DWORD>(address);
-if (value.success()) {
-    std::cout << "Value: " << value.result() << std::endl;
+#include "MemX/Process/XMemory.h"
+
+// 1. Initialize the memory manager using the active context created in Step 1.
+XMemory memory(context);
+
+// 2. Define a target base address (example address).
+PTR_T targetAddress = 0x7FF0000000;
+
+// --- Scenario A: Reading a standard variable ---
+auto readResult = memory.Read<int>(targetAddress);
+if (readResult) {
+    // Use .Value() to safely extract the data if the read operation succeeded.
+    std::cout << "Value read: " << readResult.Value() << std::endl;
+} else {
+    std::wcout << L"Read error: " << readResult.Message() << std::endl;
 }
 
-// Write a 4-byte integer (DWORD)
-DWORD newValue = 987654321;
-NTSTATUS writeStatus = process.Memory().Write<DWORD>(address, newValue);
-if (NT_SUCCESS(writeStatus)) {
-    // Success
+// --- Scenario B: Resolving a Pointer Chain ---
+// In reverse engineering, data is often deeply nested like: [[[Base] + 0x10] + 0x20]
+// MemX resolves this automatically. Just pass a vector of the base address and offsets.
+std::vector<PTR_T> offsetChain = { targetAddress, 0x10, 0x20 };
+auto chainResult = memory.Read<float>(offsetChain);
+if (chainResult) {
+    std::cout << "Float value from pointer chain: " << chainResult.Value() << std::endl;
+}
+
+// --- Scenario C: Writing Data ---
+int newHealth = 9999;
+// Overwrite the memory at targetAddress with the new value.
+XStatus writeStatus = memory.Write(targetAddress, newHealth);
+if (writeStatus) {
+    std::cout << "Data successfully written!" << std::endl;
 }
 ```
 
-#### Reading/Writing Pointer Chains
-
-If you need to read a value that is at an offset from a base address found through a series of pointers:
+### Step 3: Stealthy Module Enumeration (XModule)
+Antivirus and anti-cheat systems heavily monitor standard Windows APIs like EnumProcessModules. XModule bypasses these hooks entirely by manually reading the target's internal Process Environment Block (PEB) to locate where DLLs are loaded.
 
 ```cpp
-// Example: BaseAddress -> Pointer1 (offset +0x10) -> Value (offset +0x20)
-std::vector<MemX::ptr_t> pointerChain = {
-    0xFEEDFACE, // Base address of the first pointer
-    0x10,       // Offset to the second pointer
-    0x20        // Offset to the final value
-};
+#include "MemX/Process/XModule.h"
 
-MemX::NtResult<int> finalValue = process.Memory().Read<int>(pointerChain);
-if (finalValue.success()) {
-    std::cout << "Chained Value: " << finalValue.result() << std::endl;
+// 1. Initialize the module manager with your active context.
+XModule moduleManager(context);
+
+// 2. Fetch the Main Module (the executable file itself).
+auto mainModule = moduleManager.GetMain();
+if (mainModule) {
+    std::wcout << L"Main Executable Name: " << mainModule.Value()->FullName << std::endl;
+    std::wcout << L"Main Base Address: 0x" << std::hex << mainModule.Value()->BaseAddress << std::endl;
 }
 
-int newChainedValue = 42;
-NTSTATUS chainedWriteStatus = process.Memory().Write<int>(pointerChain, newChainedValue);
+// 3. Search for a specific DLL (e.g., ntdll.dll). 
+// This search is case-insensitive and utilizes internal caching to make future lookups instant.
+auto ntdllModule = moduleManager.GetModule(L"ntdll.dll");
+if (ntdllModule) {
+    std::wcout << L"NTDLL Base Address: 0x" << std::hex << ntdllModule.Value()->BaseAddress << std::endl;
+}
 ```
 
-## Error Handling
+### Step 4: Window Handling and Coordinate Retrieval (XWindow)
+When you are building an external overlay (a transparent window drawn over a game or application), you need exact screen coordinates. XWindow locates windows exclusively owned by your target process and calculates their precise dimensions.
 
-MemX functions often return `NTSTATUS` codes or `MemX::NtResult<T>`.
+```cpp
+#include "MemX/Process/XWindow.h"
 
-*   **`NTSTATUS`:** Check `NT_SUCCESS(status)` or `NT_FAILED(status)` macros.
-*   **`MemX::NtResult<T>`:** This is a wrapper containing the result (`.result()`) and the `NTSTATUS` (`.status()`). Use `.success()` or `.failed()` methods to check the operation's outcome.
+// 1. Initialize the window manager.
+XWindow winManager(context);
+
+// 2. Automatically find the main visible window of the target process.
+WindowInfo mainWin = winManager.GetMainWindow();
+
+if (mainWin.IsValid()) {
+    std::wcout << L"Target Window Title: " << mainWin.Title << std::endl;
+    std::cout << "Total Window Size: " << mainWin.Width << "x" << mainWin.Height << std::endl;
+    
+    // The 'ClientRect' holds the coordinates of the inner working area (excluding title bars and borders).
+    // MemX automatically maps this client area to absolute screen coordinates.
+    std::cout << "Client Area Top-Left (X, Y): " 
+              << mainWin.ClientRect.left << ", " << mainWin.ClientRect.top << std::endl;
+}
+```
