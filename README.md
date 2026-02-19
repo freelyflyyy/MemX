@@ -1,17 +1,17 @@
 ﻿# MemX - Advanced Windows Processes and Memory Operations Library
 
-## 📖 Project Introduction
+## Project Introduction
 **MemX** is a statically linked library written in modern C++ (C++17), specifically designed for advanced Windows process control, memory read/write operations, and low-level system interactions. Unlike ordinary WinAPI wrapper libraries, MemX dives deep into the operating system's lowest levels by directly invoking undocumented **NTAPI (System Calls)**, providing more powerful and stealthy operational capabilities.
 
-**🌟 Core Highlights**:
-* **Wow64 Bypass (Heaven's Gate Technology)**: Normally, a 32-bit program cannot directly interact with a 64-bit target program. MemX breaks this limitation, allowing 32-bit applications to safely and seamlessly execute native 64-bit system calls, bypassing standard WoW64 subsystem interception.
-* **Multi-level Pointer Addressing (Pointer Chains)**: In reverse engineering, data is often hidden behind multiple layers of pointers. This library has built-in pointer chain resolution capabilities. By simply providing an array of offsets, you can complete complex deep dereferencing with a single line of code.
-* **Modern C++ Architecture (Elegant Error Handling)**: Fully embraces C++17. It discards traditional `try-catch` exception handling and cumbersome `BOOL` return values in favor of custom `XResult<T>` and `XStatus`. This makes error handling not only extremely safe but also makes the code highly intuitive to read.
+**Core Highlights**:
+* **Wow64 Bypass**: Normally, a 32-bit program cannot directly interact with a 64-bit target program. MemX breaks this limitation, allowing 32-bit applications to safely and seamlessly execute native 64-bit system calls, bypassing standard WoW64 subsystem interception.
+* **Multi-level Pointer Addressing**: In reverse engineering, data is often hidden behind multiple layers of pointers. This library has built-in pointer chain resolution capabilities. By simply providing an array of offsets, you can complete complex deep dereferencing with a single line of code.
+* **Modern C++ Architecture**: Fully embraces C++17. It discards traditional `try-catch` exception handling and cumbersome `BOOL` return values in favor of custom `XResult<T>` and `XStatus`. This makes error handling not only extremely safe but also makes the code highly intuitive to read.
 * **Stealthy Module Enumeration (PEB/LDR Parsing)**: Abandons the `CreateToolhelp32Snapshot` function, which is easily monitored by antivirus software or anti-cheat systems. Instead, it directly reads the "Process Environment Block (PEB)" and "Loader Data (Ldr)" in the target process's memory to achieve highly stealthy module list retrieval.
 
 ---
 
-## 🛠️ Build and Installation Requirements
+## Build and Installation Requirements
 
 To compile and use this library in your project, you must meet the following environmental requirements:
 
@@ -21,7 +21,7 @@ To compile and use this library in your project, you must meet the following env
 
 ---
 
-## 📚 Detailed Usage Guide (Step-by-Step Tutorial)
+## Detailed Usage Guide (Step-by-Step Tutorial)
 
 Below, we will teach you how to use MemX step by step. Each step comes with detailed explanations to ensure you not only know how to do it but also understand why.
 
