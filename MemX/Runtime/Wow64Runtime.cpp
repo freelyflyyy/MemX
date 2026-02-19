@@ -8,6 +8,9 @@ namespace MemX {
 	Wow64Runtime::Wow64Runtime(HANDLE hProcess) : Runtime(hProcess) {
 	}
 
+	Wow64Runtime::Wow64Runtime(DWORD pid, HANDLE hProcess) : Runtime(pid, hProcess) {
+	}
+
 	Wow64Runtime::~Wow64Runtime() {
 	}
 
@@ -108,163 +111,68 @@ namespace MemX {
 		return ntRet;
 	}
 
-	NTSTATUS Wow64Runtime::FindModuleByLdrList32(LPWSTR lpModuleName, ModulePtr& pModule) {
-		std::vector<ModulePtr> pModulesEntry;
-		NTSTATUS status = GetAllModulesByLdrList32(&pModulesEntry);
-		if ( !NT_SUCCESS(status) ) {
-			return status;
+	NTSTATUS Wow64Runtime::EnumLdrModules(const ModuleCallback& callback) {
+		if ( !callback ) {
+			return STATUS_INVALID_PARAMETER;
 		}
-		for ( const auto& module : pModulesEntry ) {
-			if ( module->FullName == ToLower(lpModuleName) ) {
-				pModule = module;
-				return STATUS_SUCCESS;
+		
+		//General traversal Ldr table
+		auto walkList = [&] (auto ldrTable, PTR_T head, PTR_T end, ModuleArch arch) -> BOOL {
+			using LdrType = decltype(ldrTable);
+			//Prevent abnormal Ldr
+			int safeCount = 0;
+			while ( head != end && head != 0 && safeCount++ < 1000) {
+				LdrType ldrEntry;
+
+				if ( !NT_SUCCESS(ReadProcessMemoryT(head, &ldrEntry, sizeof(ldrEntry), NULL)) ) {
+					break;
+				}
+
+				wchar_t moduleFullPath[ 512 ] = { 0 };
+				ReadProcessMemoryT(ldrEntry.FullDllName.Buffer, moduleFullPath, ldrEntry.FullDllName.Length, NULL);
+
+				ModuleInfo module;
+				module.BaseAddress = ldrEntry.DllBase;
+				module.Size = ldrEntry.SizeOfImage;
+				module.FullPath = ToLower(moduleFullPath);
+				module.FullName = ToLower(getPathName(module.FullPath));
+				module.mArch = arch;
+				module.isManual = FALSE;
+				module.LdrNode = head;
+
+				//Execute callback
+				if ( !callback(module) ) return FALSE;
+
+				head = ldrEntry.InLoadOrderLinks.Flink;
+			}
+			return TRUE;
+		};
+
+		//ergodic 64 bit module
+		PEB64 peb64 = { 0 };
+		if ( NT_SUCCESS(GetTargetPeb(&peb64)) &&  peb64.Ldr != 0) {
+			PEB_LDR_DATA64 ldr64 = { 0 };
+			if ( NT_SUCCESS(ReadProcessMemoryT(peb64.Ldr, &ldr64, sizeof(PEB_LDR_DATA64), NULL)) ) {
+				PTR_T head = ldr64.InLoadOrderModuleList.Flink;
+				PTR_T end = peb64.Ldr + offsetof(PEB_LDR_DATA64, InLoadOrderModuleList);
+
+				if ( !walkList(LDR_DATA_TABLE_ENTRY64{}, head, end, ModuleArch::x64) ) {
+					return STATUS_SUCCESS;
+				}
 			}
 		}
-		return STATUS_NOT_FOUND;
-	}
-
-	NTSTATUS Wow64Runtime::FindModuleByLdrList64(LPWSTR lpModuleName, ModulePtr& pModule) {
-		std::vector<ModulePtr> pModulesEntry;
-		NTSTATUS status = GetAllModulesByLdrList64(&pModulesEntry);
-		if ( !NT_SUCCESS(status) ) {
-			return status;
-		}
-		for ( const auto& module : pModulesEntry ) {
-			if ( module->FullName == ToLower(lpModuleName) ) {
-				pModule = module;
-				return STATUS_SUCCESS;
-			}
-		}
-		return STATUS_NOT_FOUND;
-	}
-
-	NTSTATUS Wow64Runtime::GetAllModulesByLdrList32(std::vector<ModulePtr>* pModulesEntry) {
-		NTSTATUS status = STATUS_SUCCESS;
-		if ( !pModulesEntry ) return STATUS_INVALID_PARAMETER;
-		pModulesEntry->clear();
 
 		PEB32 peb32 = { 0 };
-		GetTargetPeb(&peb32);
+		if ( NT_SUCCESS(GetTargetPeb(&peb32)) && peb32.Ldr != 0 ) {
+			PEB_LDR_DATA32 ldr32;
+			if ( NT_SUCCESS(ReadProcessMemoryT(peb32.Ldr, &ldr32, sizeof(PEB_LDR_DATA32), NULL)) ) {
+				PTR_T head = ldr32.InLoadOrderModuleList.Flink;
+				PTR_T end = peb32.Ldr + offsetof(PEB_LDR_DATA32, InLoadOrderModuleList);
 
-		PEB_LDR_DATA32 ldr32;
-		if ( ReadProcessMemoryT(peb32.Ldr, &ldr32, sizeof(PEB_LDR_DATA32), NULL) != STATUS_SUCCESS ) {
-			return STATUS_ACCESS_VIOLATION;
-		}
-
-		DWORD head = ldr32.InLoadOrderModuleList.Flink;
-		DWORD end = peb32.Ldr + offsetof(PEB_LDR_DATA32, InLoadOrderModuleList);
-
-		while ( head != end && head != 0 ) {
-			LDR_DATA_TABLE_ENTRY32 ldrEntry32;
-
-			if ( ReadProcessMemoryT(head, &ldrEntry32, sizeof(LDR_DATA_TABLE_ENTRY32), NULL) != STATUS_SUCCESS ) {
-				break;
+				walkList(LDR_DATA_TABLE_ENTRY32{}, head, end, ModuleArch::x86);
 			}
-
-			wchar_t moduleFullPath[ 512 ] = { 0 };
-			ReadProcessMemoryT(ldrEntry32.FullDllName.Buffer, moduleFullPath, ldrEntry32.FullDllName.Length, NULL);
-
-			Module module;
-			module.BaseAddress = ldrEntry32.DllBase;
-			module.Size = ldrEntry32.SizeOfImage;
-			module.FullPath = ToLower(moduleFullPath);
-			module.FullName = ToLower(getPathName(module.FullPath));
-			module.IsX86 = FALSE;
-			module.isManual = FALSE;
-			module.LdrNode = head;
-
-			pModulesEntry->emplace_back(std::make_shared<Module>(module));
-
-			// 往后挪：读取 Flink
-			head = ldrEntry32.InLoadOrderLinks.Flink;
 		}
-
 		return STATUS_SUCCESS;
-	}
-
-	NTSTATUS Wow64Runtime::GetAllModulesByLdrList64(std::vector<ModulePtr>* pModulesEntry) {
-		NTSTATUS status = STATUS_SUCCESS;
-		if ( !pModulesEntry ) return STATUS_INVALID_PARAMETER;
-		pModulesEntry->clear();
-
-		// 获取 64位 PEB
-		PEB64 peb64 = { 0 };
-		GetTargetPeb(&peb64);
-
-		//读取 LDR 数据
-		PEB_LDR_DATA64 ldr64;
-		if ( ReadProcessMemoryT(peb64.Ldr, &ldr64, sizeof(PEB_LDR_DATA64), NULL) != STATUS_SUCCESS ) {
-			return STATUS_ACCESS_VIOLATION;
-		}
-
-		DWORD64 head = ldr64.InLoadOrderModuleList.Flink;
-		DWORD64 end = peb64.Ldr + offsetof(PEB_LDR_DATA64, InLoadOrderModuleList);
-
-		// 开始遍历
-		while ( head != end && head != 0 ) {
-			LDR_DATA_TABLE_ENTRY64 ldrEntry64;
-			if ( ReadProcessMemoryT(head, &ldrEntry64, sizeof(LDR_DATA_TABLE_ENTRY64), NULL) != STATUS_SUCCESS ) {
-				break;
-			}
-			wchar_t moduleFullPath[ 512 ] = { 0 };
-			ReadProcessMemoryT(ldrEntry64.FullDllName.Buffer, moduleFullPath, ldrEntry64.FullDllName.Length, NULL);
-
-			Module module;
-			module.BaseAddress = ldrEntry64.DllBase; 
-			module.Size = ldrEntry64.SizeOfImage;
-			module.FullPath = ToLower(moduleFullPath);
-			module.FullName = ToLower(getPathName(module.FullPath));
-			module.IsX86 = FALSE;   
-			module.isManual = FALSE;
-			module.LdrNode = head;
-
-			pModulesEntry->emplace_back(std::make_shared<Module>(module));
-
-			// 往后挪
-			head = ldrEntry64.InLoadOrderLinks.Flink;
-		}
-
-		return STATUS_SUCCESS;
-	}
-	NTSTATUS Wow64Runtime::GetAllModulesByPEHeaders32(std::vector<ModulePtr>* pModulesEntry) {
-		return NTSTATUS();
-	}
-	NTSTATUS Wow64Runtime::GetAllModulesByPEHeaders64(std::vector<ModulePtr>* pModulesEntry) {
-		return NTSTATUS();
-	}
-	NTSTATUS Wow64Runtime::GetAllModulesBySections32(std::vector<ModulePtr>* pModulesEntry) {
-		return NTSTATUS();
-	}
-	NTSTATUS Wow64Runtime::GetAllModulesBySections64(std::vector<ModulePtr>* pModulesEntry) {
-		return NTSTATUS();
-	}
-
-	NTSTATUS Wow64Runtime::GetAllModules32(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) {
-		switch ( moduleSearchMode ) {
-		case SCAN_LDR:
-			return GetAllModulesByLdrList32(pModulesEntry);
-		case SCAN_SECTION:
-			return GetAllModulesBySections32(pModulesEntry);
-		case SCAN_PEHEADER:
-			return GetAllModulesByPEHeaders32(pModulesEntry);
-		default:
-			break;
-		}
-		return STATUS_UNSUCCESSFUL;
-	}
-
-	NTSTATUS Wow64Runtime::GetAllModules64(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) {
-		switch ( moduleSearchMode ) {
-		case SCAN_LDR:
-			return GetAllModulesByLdrList64(pModulesEntry);
-		case SCAN_SECTION:
-			return GetAllModulesBySections64(pModulesEntry);
-		case SCAN_PEHEADER:
-			return GetAllModulesByPEHeaders64(pModulesEntry);
-		default:
-			break;
-		}
-		return STATUS_UNSUCCESSFUL;
 	}
 
 	NTSTATUS Wow64Runtime::GetAllWindow(std::vector<HWND>& handles) {

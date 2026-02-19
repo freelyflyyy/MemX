@@ -6,14 +6,18 @@ namespace MemX {
 	XMemory::~XMemory() {}
 
 	XStatus XMemory::Read(PTR_T baseAddr, PVOID pResult, size_t dwSize, bool skipUncommited) {
-		if ( !_context.IsActive() ) return STATUS_UNSUCCESSFUL;
+		if ( !_context.IsActive() || !_context.GetRuntime() ) {
+			return XStatus::Fail(L"Check whether the incoming XContext is correctly attached to the process");
+		}
 		DWORD64 dwRead = 0;
-		if ( !baseAddr ) return STATUS_INVALID_ADDRESS;
 
 		if ( !skipUncommited ) {
 			NTSTATUS status = _context.GetRuntime()->ReadProcessMemoryT(baseAddr, pResult, dwSize, &dwRead);
-			if ( NT_SUCCESS(status) && dwRead != dwSize ) return STATUS_PARTIAL_COPY;
-			return status;
+			if ( NT_SUCCESS(status) ) {
+				if ( dwRead != dwSize ) return XStatus::Fail(L"Partial copy: " + std::to_wstring(dwRead) + L"/" + std::to_wstring(dwSize));
+				return XStatus::Success();
+			}
+			return XStatus::Fail(L"Read failed," + GetSysErrMsg());
 		} else {
 			MEMORY_BASIC_INFORMATION64 mbi = { 0 };
 			PTR_T currentAddr = baseAddr;
@@ -30,42 +34,55 @@ namespace MemX {
 				size_t readSize = (mbi.RegionSize - (readStart - mbi.BaseAddress)) < ((baseAddr + dwSize) - readStart) ? (mbi.RegionSize - (readStart - mbi.BaseAddress)) : ((baseAddr + dwSize) - readStart);
 				PTR_T memoffset = readStart - baseAddr;
 				NTSTATUS status = _context.GetRuntime()->ReadProcessMemoryT(readStart, (LPVOID) ((BYTE*) pResult + memoffset), readSize, &dwRead);
-				if ( !NT_SUCCESS(status) ) return status;
+				if ( !NT_SUCCESS(status) ) 
 				currentAddr = readStart + readSize;
-				if ( dwRead != readSize ) return STATUS_PARTIAL_COPY;
+				if ( dwRead != readSize ) {
+					return XStatus::Fail(L"Partial copy in the loop");
+				}
 			}
 		}
-		return STATUS_SUCCESS;
+		return XStatus::Success();
 	}
 
 	XStatus XMemory::Read(const std::vector<PTR_T>& addrList, PVOID pResult, size_t dwSize, bool skipUncommited) {
-		if ( addrList.empty() ) return STATUS_INVALID_PARAMETER;
+		if ( addrList.empty() ) return XStatus::Fail(L"Empty address list");
 		if ( addrList.size() == 1 ) return Read(addrList[ 0 ], pResult, dwSize, skipUncommited);
 		PTR_T currentAddr = addrList[ 0 ];
 		PTR_T pointerValue = 0;
 		for ( size_t i = 1; i < addrList.size(); i++ ) {
 			NTSTATUS status = _context.GetRuntime()->ReadProcessMemoryT(currentAddr, &pointerValue, sizeof(PTR_T), nullptr);
-			if ( !NT_SUCCESS(status) ) return status;
+			if ( !NT_SUCCESS(status) ) {
+				return XStatus::Fail(L"Error in pointer chain at index " + std::to_wstring(i - 1));
+			}
 			currentAddr = pointerValue + addrList[ i ];
 		}
 		return Read(currentAddr, pResult, dwSize, skipUncommited);
 	}
 
 	XStatus XMemory::Write(PTR_T baseAddr, LPCVOID pData, size_t dwSize) {
-		if ( !_context.IsActive() ) return STATUS_UNSUCCESSFUL;
-		if ( !baseAddr ) return STATUS_INVALID_ADDRESS;
-		return _context.GetRuntime()->WriteProcessMemoryT(baseAddr, pData, dwSize);
+		if ( !_context.IsActive() || !_context.GetRuntime() ) {
+			return XStatus::Fail(L"Check whether the incoming XContext is correctly attached to the process");
+		}
+		NTSTATUS status = _context.GetRuntime()->WriteProcessMemoryT(baseAddr, pData, dwSize);
+
+		if ( NT_SUCCESS(status) ) {
+			return XStatus::Success();
+		}
+		return XStatus::Fail(L"Write failed, " + GetSysErrMsg());
 	}
 
 	XStatus XMemory::Write(const std::vector<PTR_T>& addrList, LPCVOID pData, size_t dwSize) {
-		if ( !_context.IsActive() ) return STATUS_UNSUCCESSFUL;
-		if ( addrList.empty() ) return STATUS_INVALID_PARAMETER;
+		if ( !_context.IsActive() || !_context.GetRuntime() ) {
+			return XStatus::Fail(L"Check whether the incoming XContext is correctly attached to the process");
+		}
 		if ( addrList.size() == 1 ) return Write(addrList[ 0 ], pData, dwSize);
 		PTR_T currentAddr = addrList[ 0 ];
 		PTR_T pointerValue = 0;
 		for ( size_t i = 1; i < addrList.size(); i++ ) {
 			NTSTATUS status = _context.GetRuntime()->ReadProcessMemoryT(currentAddr, &pointerValue, sizeof(PTR_T), nullptr);
-			if ( !NT_SUCCESS(status) ) return status;
+			if ( !NT_SUCCESS(status) ) {
+				return XStatus::Fail(L"Error in pointer chain at index " + std::to_wstring(i - 1));
+			}
 			currentAddr = pointerValue + addrList[ i ];
 		}
 		return Write(currentAddr, pData, dwSize);

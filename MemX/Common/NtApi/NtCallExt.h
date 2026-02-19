@@ -1,6 +1,6 @@
 #pragma once
 #include "../WinApi/WinHeaders.h"
-#include "../Types/Type.h"
+#include "../Types/XTypes.h"
 
 #include <unordered_map>
 #include <shared_mutex>

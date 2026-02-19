@@ -11,37 +11,54 @@ namespace MemX {
 
 	using PTR_T = UINT64;
 
-	struct ARCHITECHURE {
-		bool sourceWow64 = false;
-		bool targetWow64 = false;
-		bool mismatch = false;
+	enum class ModuleArch {
+		x64,
+		x86,
+		Default
 	};
 
-	struct Module{
-		PTR_T BaseAddress;
-		std::wstring FullName;
-		std::wstring FullPath;
-		PTR_T LdrNode;
-		BOOL isManual;
-		UINT32 Size;
-		BOOL IsX86;
+	typedef struct _ModuleInfo{
+		PTR_T BaseAddress;    //Module base address
+		std::wstring FullName;//Full name of the module
+		std::wstring FullPath;//Full path of the module
+		PTR_T LdrNode;        //The address of the module's LDR_DATA_TABLE_ENTRY in the target process, if available. Otherwise, it will be set to 0.
+		BOOL isManual;        //Whether the module is manually mapped
+		UINT32 Size;          //Module size in bytes
+		ModuleArch mArch;           //Whether the module is a 32-bit module
 
-		bool operator==(const Module& other) const{
+		_ModuleInfo()
+			: BaseAddress(0), LdrNode(0), isManual(FALSE), Size(0), mArch(ModuleArch::Default) {
+		}
+
+		_ModuleInfo(PTR_T base, UINT32 size, const std::wstring& name, ModuleArch mArch)
+			: BaseAddress(base),
+			Size(size),
+			FullName(name),
+			LdrNode(0),
+			isManual(FALSE),
+			mArch(mArch) {
+		}
+
+		_ModuleInfo(PTR_T base, const std::wstring& name, const std::wstring& path, PTR_T ldr, BOOL manual, UINT32 sz, ModuleArch mArch)
+			: BaseAddress(base),
+			FullName(name),
+			FullPath(path),
+			LdrNode(ldr),
+			isManual(manual),
+			Size(sz),
+			mArch(mArch) {
+		}
+
+		bool operator==(const _ModuleInfo& other) const{
 			return this->BaseAddress == other.BaseAddress;
 		}
 
 		bool isVild() const {
 			return BaseAddress != 0;
 		}
-	};
+	} ModuleInfo;
 
-	enum MODULE_SEARCH_MODE {
-		SCAN_LDR,
-		SCAN_SECTION,
-		SCAN_PEHEADER
-	};
-
-	struct WindowInfo {
+	typedef struct _WindowInfo {
 		HWND hWindow;           //Window handle
 		std::wstring Title;     //Window Title
 		std::wstring ClassName; //Window class name
@@ -54,7 +71,10 @@ namespace MemX {
 		BOOL IsVisible;         //Visible or not
 
 		bool IsValid() const { return hWindow != NULL; }
-	};
+	} WindowInfo;
+
+	typedef std::shared_ptr<ModuleInfo> ModulePtr;
+	typedef std::shared_ptr<WindowInfo> WindowPtr;
 
 
 	//Basic Types with XResult wrapper
@@ -66,5 +86,6 @@ namespace MemX {
 	using XDouble = XResult<DOUBLE>;
 
 	using XPtr = XResult<PTR_T>;
-	using XModule = XResult<Module>;
+	using XModulePtr = XResult<ModulePtr>;
+	using XWindowPtr = XResult<WindowPtr>;
 }

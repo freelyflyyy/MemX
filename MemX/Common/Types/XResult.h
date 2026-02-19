@@ -7,7 +7,7 @@
 
 namespace MemX {
 	template <typename T>
-	class XResult : XStatus {
+	class XResult : public XStatus {
 		private:
 		std::optional<T> _data;
 

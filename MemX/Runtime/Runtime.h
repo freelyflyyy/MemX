@@ -3,17 +3,21 @@
 #include "../Common/WinApi/WinHeaders.h"
 #include "../Common/WinApi/ArchitectureApi.h"
 #include "../Common/NtApi/NtApi.h"
-#include "../Common/Types/Type.h"
-
-
+#include "../Common/Types/XTypes.h"
+#include <functional>
 
 namespace MemX {
+	using ModuleCallback = std::function<BOOL(ModuleInfo&)>;
+
 	class Runtime {
 		public:
 		Runtime(HANDLE hProcess) : _hProcess(hProcess) {
 			_pid = GetProcessId(hProcess);
-		};
-		~Runtime() {};
+		}
+
+		Runtime(DWORD pid, HANDLE hProcess) : _hProcess(hProcess), _pid(pid) {
+		}
+		~Runtime() {}
 
 		PTR_T maxAddr32() {
 			return 0x7FFFFFFF;
@@ -57,25 +61,11 @@ namespace MemX {
 
 		virtual NTSTATUS VirtualQueryExT(PTR_T lpAddress, PMEMORY_BASIC_INFORMATION64 lpBuffer) = 0;
 
-		virtual NTSTATUS FindModuleByLdrList32(LPWSTR lpModuleName, ModulePtr& pModule) = 0;
+		virtual NTSTATUS EnumLdrModules(const ModuleCallback& callback) = 0;
 
-		virtual NTSTATUS FindModuleByLdrList64(LPWSTR lpModuleName, ModulePtr& pModule) = 0;
+		//virtual NTSTATUS EnumSectionModules(const ModuleCallback& callback);
 
-		virtual NTSTATUS GetAllModulesByLdrList32(std::vector<ModulePtr>* pModulesEntry) = 0;
-
-		virtual NTSTATUS GetAllModulesByLdrList64(std::vector<ModulePtr>* pModulesEntry) = 0;
-
-		virtual NTSTATUS GetAllModulesByPEHeaders32(std::vector<ModulePtr>* pModulesEntry) = 0;
-
-		virtual NTSTATUS GetAllModulesByPEHeaders64(std::vector<ModulePtr>* pModulesEntry) = 0;
-
-		virtual NTSTATUS GetAllModulesBySections32(std::vector<ModulePtr>* pModulesEntry) = 0;
-
-		virtual NTSTATUS GetAllModulesBySections64(std::vector<ModulePtr>* pModulesEntry) = 0;
-
-		virtual NTSTATUS GetAllModules32(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) = 0;
-
-		virtual NTSTATUS GetAllModules64(std::vector<ModulePtr>* pModulesEntry, MODULE_SEARCH_MODE& moduleSearchMode) = 0;
+		//virtual NTSTATUS EnumManualModules(const ModuleCallback& callback);
 
 		virtual NTSTATUS GetAllWindow(std::vector<HWND>& handles) = 0; 
 

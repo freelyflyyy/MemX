@@ -21,10 +21,10 @@ namespace MemX {
 		}
 
 		static XStatus Fail(std::wstring message) {
-			std::wstring location = std::wstring(__FUNCTIONW__) + L":" + std::to_wstring(__LINE__);
-			return XStatus(XSTATUS_FAILURE, L"[" + location + L"] " + message);
+			return XStatus(XSTATUS_FAILURE, message);
 		}
 
+		Status& Status() { return _success; }
 		const std::wstring& Message() const { return _message; }
 
 		XStatus& operator=(const XStatus&) = default;

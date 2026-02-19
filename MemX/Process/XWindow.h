@@ -1,6 +1,6 @@
 #pragma once
 #include "XContext.h"
-#include "../Common/Types/Type.h"
+#include "../Common/Types/XTypes.h"
 #include <vector>
 #include <string>
 

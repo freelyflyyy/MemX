@@ -87,9 +87,9 @@ namespace MemX {
 		_arch = texApi.GetArchitechure();
 
 		if ( !_arch.sourceWow64 ) {
-			_runtime = std::make_unique<X64Runtime>(_hProcess);
+			_runtime = std::make_unique<X64Runtime>(_pid, _hProcess);
 		} else {
-			_runtime = std::make_unique<Wow64Runtime>(_hProcess);
+			_runtime = std::make_unique<Wow64Runtime>(_pid, _hProcess);
 		}
 		return XStatus::Success();
 	}

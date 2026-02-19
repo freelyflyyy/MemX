@@ -1,8 +1,14 @@
 #pragma once
-#include "../Types/Type.h"
+#include "../Types/XTypes.h"
 #include "../WinApi/WinHeaders.h"
 
 namespace MemX {
+	struct ARCHITECHURE {
+		bool sourceWow64 = false;
+		bool targetWow64 = false;
+		bool mismatch = false;
+	};
+
 	class ArchitectureApi {
 		public:
 		ArchitectureApi() {

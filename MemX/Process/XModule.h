@@ -1,22 +1,41 @@
 #pragma once
 #include "XContext.h"
-#include "../Common/Types/Type.h"
+#include "../Common/Types/XTypes.h"
 #include <shared_mutex>
 #include <unordered_map>
 
 namespace MemX {
+	enum class ModuleStrategy {
+		Fast,		//Ldr link
+		BruteForce,
+		Hybrid
+	};
+
 	class XModule {
 		public:
 		explicit XModule(XContext& context);
 		~XModule();
 
-		ModulePtr GetMainModule();
-		ModulePtr GetModule(WCHAR* moduleName);
-		ModulePtr GetModule(WCHAR* moduleName, MODULE_SEARCH_MODE moduleSearchMode);
+		XModulePtr GetMain();
+		XModulePtr GetModule(const std::wstring& moduleName,
+							 ModuleArch mArch = ModuleArch::Default,
+							 ModuleStrategy strategy = ModuleStrategy::Fast);
+
+		XModulePtr GetModule(PTR_T moduleAddr,
+							 ModuleArch mArch = ModuleArch::Default,
+							 ModuleStrategy strategy = ModuleStrategy::Fast);
+		XModulePtr GetAllModules(ModuleStrategy strategy = ModuleStrategy::Hybrid);
+		SIZE_T Refresh(ModuleStrategy strategy = ModuleStrategy::Fast);
 
 		private:
+		XModulePtr GetModuleVa(const std::wstring& moduleName = L"",
+							   PTR_T moduleAddr = 0,
+							   ModuleArch mArch = ModuleArch::Default,
+							   ModuleStrategy strategy = ModuleStrategy::Fast);
+		private:
 		XContext& _context;
-		std::shared_mutex _mutex;
-		std::unordered_map<std::wstring, Module> _cache;
+		mutable std::shared_mutex _mutex;
+		std::unordered_map<std::wstring, ModulePtr> _nativeCache;
+		std::unordered_map<std::wstring, ModulePtr> _wow64Cache;
 	};
 }
