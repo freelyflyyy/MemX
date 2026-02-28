@@ -1,4 +1,4 @@
-﻿# MemX - Advanced Windows Processes and Memory Operations Library
+# MemX - Advanced Windows Processes and Memory Library
 
 ## Project Introduction
 **MemX** is a statically linked library written in modern C++ (C++17), specifically designed for advanced Windows process control, memory read/write operations, and low-level system interactions. Unlike ordinary WinAPI wrapper libraries, MemX dives deep into the operating system's lowest levels by directly invoking undocumented **NTAPI (System Calls)**, providing more powerful and stealthy operational capabilities.
