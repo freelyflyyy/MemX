@@ -8,11 +8,6 @@
 
 namespace MemX {
 
-	union Reg64 {
-		DWORD64 v;
-		DWORD dw[ 2 ];
-	};
-
 	class NtCallExt {
 		public:
 		virtual ~NtCallExt() = default;
@@ -98,6 +93,13 @@ namespace MemX {
 		DWORD64 __cdecl GetTeb64() override;
 		DWORD64 __cdecl GetPeb64() override;
 		DWORD64 __cdecl GetNtdll64() override;
+		DWORD __cdecl GetProcAddress32(DWORD hMod, const char* funcName);
+		DWORD __cdecl GetModuleBase32(const wchar_t* moduleName);
+		DWORD __cdecl GetTeb32();
+		DWORD __cdecl GetPeb32();
+		DWORD __cdecl GetNtdll32();
+		DWORD __cdecl GetLdrGetProcedureAddress32();
+		DWORD __cdecl LoadLibrary32(const wchar_t* moduleName);
 		DWORD64 __cdecl GetLdrGetProcedureAddress();
 		DWORD64 __cdecl X64CallVa(DWORD64 funcAddr, int argCount, ...);
 
@@ -106,7 +108,7 @@ namespace MemX {
 			if ( !funcAddr ) {
 				return ERROR_INVALID_ADDRESS;
 			}
-			NTSTATUS result = (NTSTATUS)X64CallVa(
+			NTSTATUS result = (NTSTATUS) X64CallVa(
 				(DWORD64) funcAddr,
 				(int) sizeof...(Args),
 				(DWORD64) std::forward<Args>(args)...

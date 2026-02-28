@@ -225,6 +225,140 @@ namespace MemX {
 		 return _ntdll64;
 	 }
 
+	 DWORD __cdecl Wow64NtCallExt::GetProcAddress32(DWORD hMod, const char* funcName) {
+		 if ( !hMod || !funcName ) return 0;
+
+		 auto fnLdrGetProcedureAddress = (NTSTATUS(NTAPI*)(DWORD, _UNICODE_STRING_T<DWORD>*, DWORD, DWORD*))GetLdrGetProcedureAddress32();
+		 if ( !fnLdrGetProcedureAddress ) return 0;
+
+		 _UNICODE_STRING_T<DWORD> fName = { 0 };
+		 fName.Buffer = (DWORD) funcName; 
+		 fName.Length = (WORD) strlen(funcName);
+		 fName.MaximumLength = fName.Length + 1;
+
+		 DWORD funcAddr = 0;
+
+		 NTSTATUS status = fnLdrGetProcedureAddress(hMod, &fName, 0, &funcAddr);
+		 if ( NT_SUCCESS(status) ) {
+			 return funcAddr;
+		 }
+		 return 0;
+	 }
+
+	 DWORD __cdecl Wow64NtCallExt::GetModuleBase32(const wchar_t* moduleName) {
+		 if ( !moduleName ) return 0;
+
+		 #ifdef _M_IX86
+		 DWORD pebAddr = GetPeb32();
+		 if ( !pebAddr ) return 0;
+
+		 PEB32* peb32 = (PEB32*) pebAddr;
+		 PEB_LDR_DATA32* ldr = (PEB_LDR_DATA32*) peb32->Ldr;
+		 if ( !ldr ) return 0;
+
+		 DWORD listHead = (DWORD) &ldr->InLoadOrderModuleList;
+		 DWORD currentNode = ldr->InLoadOrderModuleList.Flink;
+
+		 while ( currentNode != listHead && currentNode != 0 ) {
+			 LDR_DATA_TABLE_ENTRY32* entry = (LDR_DATA_TABLE_ENTRY32*) currentNode;
+
+			 if ( entry->DllBase != 0 && entry->BaseDllName.Buffer != 0 ) {
+				 if ( _wcsicmp((wchar_t*) entry->BaseDllName.Buffer, moduleName) == 0 ) {
+					 return entry->DllBase;
+				 }
+			 }
+			 currentNode = entry->InLoadOrderLinks.Flink;
+		 }
+		 #endif
+
+		 return 0;
+	 }
+
+	 DWORD __cdecl Wow64NtCallExt::GetTeb32() {
+		 DWORD _teb32 = 0;
+		 #ifdef _M_IX86
+		 _teb32 = __readfsdword(FIELD_OFFSET(NT_TIB, Self));
+		 #endif
+		 return _teb32;
+	 }
+
+	 DWORD __cdecl Wow64NtCallExt::GetPeb32() {
+		 DWORD _peb32 = 0;
+		 #ifdef _M_IX86
+		 _peb32 = __readfsdword(FIELD_OFFSET(TEB, ProcessEnvironmentBlock));
+		 #endif
+		 return _peb32;
+	 }
+
+	 DWORD __cdecl Wow64NtCallExt::GetNtdll32() {
+		 static DWORD _ntdll32 = 0;
+		 if ( _ntdll32 != 0 ) {
+			 return _ntdll32;
+		 }
+		 _ntdll32 = GetModuleBase32(L"ntdll.dll");
+		 return _ntdll32;
+	 }
+
+	 DWORD __cdecl Wow64NtCallExt::GetLdrGetProcedureAddress32() {
+		 static DWORD _ldrGetProcAddr32 = 0;
+		 if ( _ldrGetProcAddr32 != 0 ) return _ldrGetProcAddr32;
+
+		 DWORD dllBase = GetNtdll32();
+		 if ( !dllBase ) return 0;
+
+		 IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*) dllBase;
+		 if ( dosHeader->e_magic != IMAGE_DOS_SIGNATURE ) return 0;
+
+		 IMAGE_NT_HEADERS32* ntHeaders = (IMAGE_NT_HEADERS32*) (dllBase + dosHeader->e_lfanew);
+		 if ( ntHeaders->Signature != IMAGE_NT_SIGNATURE ) return 0;
+
+		 DWORD exportRva = ntHeaders->OptionalHeader.DataDirectory[ IMAGE_DIRECTORY_ENTRY_EXPORT ].VirtualAddress;
+		 if ( !exportRva ) return 0;
+
+		 IMAGE_EXPORT_DIRECTORY* exportDir = (IMAGE_EXPORT_DIRECTORY*) (dllBase + exportRva);
+
+		 DWORD* nameTable = (DWORD*) (dllBase + exportDir->AddressOfNames);
+		 WORD* ordTable = (WORD*) (dllBase + exportDir->AddressOfNameOrdinals);
+		 DWORD* funcTable = (DWORD*) (dllBase + exportDir->AddressOfFunctions);
+
+		 for ( DWORD i = 0; i < exportDir->NumberOfNames; i++ ) {
+			 char* funcName = (char*) (dllBase + nameTable[ i ]);
+			 if ( strcmp(funcName, "LdrGetProcedureAddress") == 0 ) {
+				 _ldrGetProcAddr32 = dllBase + funcTable[ ordTable[ i ] ];
+				 return _ldrGetProcAddr32;
+			 }
+		 }
+		 return 0;
+	 }
+
+	 DWORD __cdecl Wow64NtCallExt::LoadLibrary32(const wchar_t* moduleName) {
+		 if ( !moduleName ) return 0;
+
+		 DWORD hMod = GetModuleBase32(moduleName);
+		 if ( hMod != 0 ) return hMod;
+
+		 static DWORD pLdrLoadDll32 = 0;
+		 if ( !pLdrLoadDll32 ) {
+			 pLdrLoadDll32 = GetProcAddress32(GetNtdll32(), "LdrLoadDll");
+		 }
+		 if ( !pLdrLoadDll32 ) return 0;
+
+		 _UNICODE_STRING_T<DWORD> usStr = { 0 };
+		 usStr.Length = (WORD) (wcslen(moduleName) * sizeof(wchar_t));
+		 usStr.MaximumLength = usStr.Length + sizeof(wchar_t);
+		 usStr.Buffer = (DWORD) moduleName;
+
+		 auto fnLdrLoadDll32 = (NTSTATUS(NTAPI*)(PWCHAR, ULONG*, _UNICODE_STRING_T<DWORD>*, DWORD*)) pLdrLoadDll32;
+		 DWORD hResult32 = 0;
+
+		 NTSTATUS status = fnLdrLoadDll32(NULL, NULL, &usStr, &hResult32);
+
+		 if ( NT_SUCCESS(status) ) {
+			 return hResult32;
+		 }
+		 return 0;
+	 }
+
 	 DWORD64 __cdecl Wow64NtCallExt::GetLdrGetProcedureAddress() {
 		 DWORD64 dllBase = GetNtdll64();
 		 if ( !dllBase ) {
