@@ -1,6 +1,5 @@
 #include "NtCallExt.h"
 #include "NtApi.h"
-#include "../Utils/Wow64Utils.h"
 #include <cstdarg>
 #include <vector>
 
@@ -215,6 +214,50 @@ namespace MemX {
 		return _rax.v;
 	}
 	#pragma warning(pop)
+
+	 VOID __cdecl Wow64NtCallExt::memcpy64(VOID* dest, DWORD64 src, SIZE_T sz) {
+		 if ( (nullptr == dest) || (0 == src) || (0 == sz) )
+			 return;
+
+		 #ifdef _M_IX86
+		 Reg64 _src = { src };
+		 __asm {
+			 x64_start
+
+			 push	edi
+			 push	esi
+
+			 mov		edi, dest
+			 rex_w	mov	    esi, dword ptr[ _src ]
+			 mov		ecx, sz
+
+			 mov		eax, ecx
+			 and eax, 3
+			 shr		ecx, 2
+
+			 rep		movsd
+			 test	eax, eax
+			 je		_remain_0
+
+			 cmp		eax, 1
+			 je		_remain_1
+
+			 movsw
+
+			 cmp		eax, 2
+			 je		_remain_0
+
+			 _remain_1 :
+			 movsb
+
+			 _remain_0 :
+			 pop		esi
+			 pop		edi
+
+			 x64_end
+		 }
+		 #endif
+	 }
 
 	 DWORD64 __cdecl Wow64NtCallExt::GetNtdll64() {
 		 static DWORD64 _ntdll64 = 0;

@@ -1,9 +1,8 @@
 #include "../NtApi/NtApi.h"
 #include "StringUtils.h"
-#include "Wow64Utils.h"
 
 namespace MemX {
-	inline NTSTATUS EnablePrivilege(LPCWSTR lpszPrivilege) {
+	static NTSTATUS EnablePrivilege(LPCWSTR lpszPrivilege) {
 		HANDLE hToken = nullptr;
 		TOKEN_PRIVILEGES tp = { 0 };
 		LUID luid;

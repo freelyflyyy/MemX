@@ -1,5 +1,4 @@
 #include "Wow64Runtime.h"
-#include "MemX/Common/Utils/Wow64Utils.h"
 #include "MemX/Common/Utils/StringUtils.h"
 #include "../Common/NtApi/NtApi.h"
 #include "../Common/NtApi/NtCallExt.h"
